@@ -1,4 +1,3 @@
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/netfilter.h>
@@ -6,64 +5,77 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/udp.h>
+#include <linux/string.h>
+#include <linux/byteorder/generic.h>
 
-MODULE_LICENSE("GPL");
+static struct nf_hook_ops *nf_tracer_ops = NULL;
+static struct nf_hook_ops *nf_tracer_out_ops = NULL;
 
-static struct nf_hook_ops *nfho = NULL;
+static unsigned int nf_tracer_handler(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+    if(skb==NULL) {
+        return NF_ACCEPT;
+    }
 
-static unsigned int hfunc( void *priv, struct sk_buff *skb, const struct nf_hook_state *state )
-{
-	( void )priv;
-	struct iphdr  *iph;
-	struct udphdr *udph;
+    struct iphdr * iph;
+    iph = ip_hdr(skb);
 
-	if ( skb && state )
-	{
-		iph = ip_hdr( skb );
-
-		if ( iph->protocol == IPPROTO_UDP )
+    if(iph && iph->protocol == IPPROTO_TCP ) {
+        struct tcphdr *tcph = tcp_hdr(skb);
+		if ( ntohs(tcph->source) == 2323 )
 		{
-			udph = udp_hdr( skb );
-			if ( ntohs(udph->dest) == 53 )
-			{
-				return NF_ACCEPT;
-			}
+			pr_info("source : %pI4:%hu | dest : %pI4:%hu | seq : %u | ack_seq : %u | window : %hu | csum : 0x%hx | urg_ptr %hu\n", &(iph->saddr),ntohs(tcph->source),&(iph->saddr),ntohs(tcph->dest), ntohl(tcph->seq), ntohl(tcph->ack_seq), ntohs(tcph->window), ntohs(tcph->check), ntohs(tcph->urg_ptr));
 		}
-		else if ( iph->protocol == IPPROTO_TCP )
-		{
-			return NF_ACCEPT;
-		}
-	}
-	else
-	{
-		return NF_ACCEPT;
-	}
-	
-	return NF_DROP;
+    }
+
+    return NF_ACCEPT;
 }
 
-static int __init LKM_init(void)
-{
-    int err;
-	nfho = (struct nf_hook_ops*)kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-	
-	nfho->hook 	= (nf_hookfn*)hfunc;		/* hook function */
-	nfho->hooknum 	= NF_INET_PRE_ROUTING;		/* received packets */
-	nfho->pf 	= PF_INET;			/* IPv4 */
-	nfho->priority 	= NF_IP_PRI_FIRST;		/* max hook priority */
-	
-	err = nf_register_net_hook(&init_net, nfho);
-	if ( err < 0 )
-		return err;
+
+static int __init nf_tracer_init(void) {
+
+    nf_tracer_ops = (struct nf_hook_ops*)kcalloc(1,  sizeof(struct nf_hook_ops), GFP_KERNEL);
+
+    if(nf_tracer_ops!=NULL) {
+        nf_tracer_ops->hook = (nf_hookfn*)nf_tracer_handler;
+        nf_tracer_ops->hooknum = NF_INET_PRE_ROUTING;
+        nf_tracer_ops->pf = NFPROTO_IPV4;
+        nf_tracer_ops->priority = NF_IP_PRI_FIRST;
+
+        nf_register_net_hook(&init_net, nf_tracer_ops);
+    }
+
+    nf_tracer_out_ops = (struct nf_hook_ops*)kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+
+    if(nf_tracer_out_ops!=NULL) {
+        nf_tracer_out_ops->hook = (nf_hookfn*)nf_tracer_handler;
+        nf_tracer_out_ops->hooknum = NF_INET_LOCAL_OUT;
+        nf_tracer_out_ops->pf = NFPROTO_IPV4;
+        nf_tracer_out_ops->priority = NF_IP_PRI_FIRST;
+
+        nf_register_net_hook(&init_net, nf_tracer_out_ops);
+    }
+
+	printk( KERN_INFO "NetVanguard Init\n" );
 
     return 0;
 }
 
-static void __exit LKM_exit(void)
-{
-	nf_unregister_net_hook(&init_net, nfho);
-	kfree(nfho);
+static void __exit nf_tracer_exit(void) {
+
+    if(nf_tracer_ops != NULL) {
+        nf_unregister_net_hook(&init_net, nf_tracer_ops);
+        kfree(nf_tracer_ops);
+    }
+
+    if(nf_tracer_out_ops != NULL) {
+        nf_unregister_net_hook(&init_net, nf_tracer_out_ops);
+        kfree(nf_tracer_out_ops);
+    }
+
+	printk( KERN_INFO "NetVanguard Exit\n" );
 }
 
-module_init(LKM_init);
-module_exit(LKM_exit);
+module_init(nf_tracer_init);
+module_exit(nf_tracer_exit);
+
+MODULE_LICENSE("GPL");

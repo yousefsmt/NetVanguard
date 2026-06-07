@@ -7,13 +7,13 @@
 #include "tcp_handler.h"
 
 ssize_t tcp_socket_read( struct socket_config_t* socket_config,
-                     char*                   buffer,
-                     const size_t                  buffer_size )
+                     char*                       buffer,
+                     const size_t                buffer_size )
 {
     ssize_t read_byte;
 
     read_byte = recv( socket_config->client.client_fd, buffer, buffer_size, 0 );
-    if ( read_byte < buffer_size )
+    if ( ( size_t )read_byte < buffer_size )
     {
         perror("read()");
         close( socket_config->socket_fd );
@@ -146,7 +146,7 @@ int tcp_socket_init( struct socket_config_t* socket_config,
     }
     case CLIENT_SIDE:
     {
-        ret = tcp_socket_connecting( socket_config, "127.0.1.10", 2323 );
+        ret = tcp_socket_connecting( socket_config, "127.0.1.10", 3635 );
         break;
     }
     default:

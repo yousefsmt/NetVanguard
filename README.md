@@ -11,11 +11,11 @@
 - [*] Successfully run `autoreconf -i`, `./configure`, and `make` to produce dummy binaries.
 
 ## Phase 2: Kernel-Space Development (Kernel Module & Netdevices)
-- [ ] Write a basic LKM skeleton (`init_module`, `cleanup_module`) and test loading/unloading with `insmod`/`rmmod`.
-- [ ] Implement Netfilter hooks (`NF_INET_PRE_ROUTING` or `NF_INET_LOCAL_IN`) to intercept incoming IPv4 traffic.
-- [ ] Write a packet parser function inside the module to extract Ethernet, IP, and TCP/UDP headers from the `sk_buff` struct.
-- [ ] Implement a basic filtering or marking logic (e.g., identify specific traffic signatures or drop specific ports).
-- [ ] Ensure kernel logs (`printk`) correctly output intercepted packet statistics (use `dmesg` to verify).
+- [*] Write a basic LKM skeleton (`init_module`, `cleanup_module`) and test loading/unloading with `insmod`/`rmmod`.
+- [*] Implement Netfilter hooks (`NF_INET_PRE_ROUTING` or `NF_INET_LOCAL_IN`) to intercept incoming IPv4 traffic.
+- [*] Write a packet parser function inside the module to extract Ethernet, IP, and TCP/UDP headers from the `sk_buff` struct.
+- [*] Implement a basic filtering or marking logic (e.g., identify specific traffic signatures or drop specific ports).
+- [*] Ensure kernel logs (`printk`) correctly output intercepted packet statistics (use `dmesg` to verify).
 
 ## Phase 3: User-Space to Kernel-Space IPC (Netlink Sockets)
 - [ ] Define a custom Netlink protocol family header file shared between `src/kernel/` and `src/user/`.
