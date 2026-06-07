@@ -1,3 +1,3 @@
-# Tell Kbuild to compile src/kernel/kernel.c into NetVanguard.ko
-obj-m += NetVanguard.o
-NetVanguard-objs := src/kernel/kernel.o
+# Tell Kbuild to compile src/kernel/kernel.c into netvanguard.ko
+obj-m += netvanguard.o
+netvanguard-objs := src/kernel/kernel.o

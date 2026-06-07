@@ -3,12 +3,12 @@
 # NetVanguard Project TODO List
 
 ## Phase 1: Environment Setup & Build System (Autotools & Git)
-- [ ] Initialize a new Git repository (`git init`).
-- [ ] Set up the standard directory structure (`src/kernel/`, `src/user/`, `src/cli/`, `include/`).
-- [ ] Write the `configure.ac` file to define the Autotools project.
-- [ ] Write the `Makefile.am` files for the root, user-space, and CLI directories.
-- [ ] Create a `Kbuild` or `Makefile` specific to the Linux Kernel Module (LKM) compilation.
-- [ ] Successfully run `autoreconf -i`, `./configure`, and `make` to produce dummy binaries.
+- [*] Initialize a new Git repository (`git init`).
+- [*] Set up the standard directory structure (`src/kernel/`, `src/user/`, `src/cli/`, `include/`).
+- [*] Write the `configure.ac` file to define the Autotools project.
+- [*] Write the `Makefile.am` files for the root, user-space, and CLI directories.
+- [*] Create a `Kbuild` or `Makefile` specific to the Linux Kernel Module (LKM) compilation.
+- [*] Successfully run `autoreconf -i`, `./configure`, and `make` to produce dummy binaries.
 
 ## Phase 2: Kernel-Space Development (Kernel Module & Netdevices)
 - [ ] Write a basic LKM skeleton (`init_module`, `cleanup_module`) and test loading/unloading with `insmod`/`rmmod`.
