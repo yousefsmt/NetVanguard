@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "NetVanguard",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/tests/tcp_simple_connection/include",
+                "/usr/src/linux-headers-6.12.90+deb13.1-common/include",
+                "/usr/src/linux-headers-6.12.90+deb13.1-common/include/uapi",
+                "/usr/src/linux-headers-6.12.90+deb13.1-common/arch/x86/include",
+                "/usr/src/linux-headers-6.12.90+deb13.1-common/arch/x86/include/uapi",
+                "/usr/src/linux-headers-6.12.90+deb13.1-amd64/include",
+                "/usr/src/linux-headers-6.12.90+deb13.1-amd64/include/generated",
+                "/usr/src/linux-headers-6.12.90+deb13.1-amd64/arch/x86/include/generated"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "intelliSenseMode": "linux-gcc-x64",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "/usr/src/linux-headers-6.12.90+deb13.1-common",
+                    "/usr/src/linux-headers-6.12.90+deb13.1-amd64"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            }
+        }
+    ],
+    "version": 4
+}
