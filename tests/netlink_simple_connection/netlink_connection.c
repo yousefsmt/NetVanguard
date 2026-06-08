@@ -1,117 +1,123 @@
+/* SPDX-License-Identifier: LGPL-2.1-only */
+
+#include "nl-default.h"
+
+#include <linux/genetlink.h>
+
+#include <linux/taskstats.h>
+
+#include <netlink/cli/utils.h>
+
+static struct nla_policy attr_policy[TASKSTATS_TYPE_MAX+1] = {
+	[TASKSTATS_TYPE_PID]	= { .type = NLA_U32 },
+	[TASKSTATS_TYPE_TGID]	= { .type = NLA_U32 },
+	[TASKSTATS_TYPE_STATS]	= { .minlen = sizeof(struct taskstats) },
+	[TASKSTATS_TYPE_AGGR_PID] = { .type = NLA_NESTED },
+	[TASKSTATS_TYPE_AGGR_TGID] = { .type = NLA_NESTED },
+};
 
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <string.h>
-#include <asm/types.h>
-#include <linux/netlink.h>
-#include <linux/socket.h>
-#include <errno.h>
-
-#define NETLINK_USER 30 // same customized protocol as in my kernel module
-#define MAX_PAYLOAD 1024 // maximum payload size
-
-struct sockaddr_nl src_addr, dest_addr;
-struct nlmsghdr *nlh = NULL;
-struct nlmsghdr *nlh2 = NULL;
-struct msghdr msg, resp;  // famous struct msghdr, it includes "struct iovec *   msg_iov;"
-struct iovec iov, iov2;
-int sock_fd;
-
-int main()
+static int parse_cmd_new(struct nl_cache_ops *unused, struct genl_cmd *cmd,
+			 struct genl_info *info, void *arg)
 {
-    //int socket(int domain, int type, int protocol);
-    sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_USER); //NETLINK_KOBJECT_UEVENT  
+	struct nlattr *attrs[TASKSTATS_TYPE_MAX+1];
+	struct nlattr *nested;
+	int err;
 
-    if(sock_fd < 0)
-        return -1;
+	if (info->attrs[TASKSTATS_TYPE_AGGR_PID])
+		nested = info->attrs[TASKSTATS_TYPE_AGGR_PID];
+	else if (info->attrs[TASKSTATS_TYPE_AGGR_TGID])
+		nested = info->attrs[TASKSTATS_TYPE_AGGR_TGID];
+	else {
+		fprintf(stderr, "Invalid taskstats message: Unable to find "
+				"nested attribute/\n");
+		return NL_SKIP;
+	}
 
-    memset(&src_addr, 0, sizeof(src_addr));
-    src_addr.nl_family = AF_NETLINK;
-    src_addr.nl_pid = getpid(); /* self pid */
-
-    //int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-    if(bind(sock_fd, (struct sockaddr*)&src_addr, sizeof(src_addr))){
-        perror("bind() error\n");
-        close(sock_fd);
-        return -1;
-    }
-
-    memset(&dest_addr, 0, sizeof(dest_addr));
-    dest_addr.nl_family = AF_NETLINK;
-    dest_addr.nl_pid = 0;       /* For Linux Kernel */
-    dest_addr.nl_groups = 0;    /* unicast */
-
-    //nlh: contains "Hello" msg
-    nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
-    memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
-    nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-    nlh->nlmsg_pid = getpid();  //self pid
-    nlh->nlmsg_flags = 0; 
-
-    //nlh2: contains received msg
-    nlh2 = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
-    memset(nlh2, 0, NLMSG_SPACE(MAX_PAYLOAD));
-    nlh2->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-    nlh2->nlmsg_pid = getpid();  //self pid
-    nlh2->nlmsg_flags = 0; 
-
-    strcpy(NLMSG_DATA(nlh), "Hello this is a msg from userspace");   //put "Hello" msg into nlh
-
-    iov.iov_base = (void *)nlh;         //iov -> nlh
-    iov.iov_len = nlh->nlmsg_len;
-    msg.msg_name = (void *)&dest_addr;  //msg_name is Socket name: dest
-    msg.msg_namelen = sizeof(dest_addr);
-    msg.msg_iov = &iov;                 //msg -> iov
-    msg.msg_iovlen = 1;
-
-    iov2.iov_base = (void *)nlh2;         //iov -> nlh2
-    iov2.iov_len = nlh2->nlmsg_len;
-    resp.msg_name = (void *)&dest_addr;  //msg_name is Socket name: dest
-    resp.msg_namelen = sizeof(dest_addr);
-    resp.msg_iov = &iov2;                 //resp -> iov
-    resp.msg_iovlen = 1;
+	err = nla_parse_nested(attrs, TASKSTATS_TYPE_MAX, nested, attr_policy);
+	if (err < 0) {
+		nl_perror(err, "Error while parsing generic netlink message");
+		return err;
+	}
 
 
+	if (attrs[TASKSTATS_TYPE_STATS]) {
+		struct taskstats *stats = nla_data(attrs[TASKSTATS_TYPE_STATS]);
 
-    printf("Sending message to kernel\n");
+		printf("%s pid %u uid %u gid %u parent %u\n",
+		       stats->ac_comm, stats->ac_pid, stats->ac_uid,
+		       stats->ac_gid, stats->ac_ppid);
+	}
 
-    int ret = sendmsg(sock_fd, &msg, 0);   
-    printf("send ret: %d\n", ret); 
-
-    printf("Waiting for message from kernel\n");
-
-    /* Read message from kernel */
-    recvmsg(sock_fd, &resp, 0);  //msg is also receiver for read
-
-    printf("Received message payload: %s\n", (char *) NLMSG_DATA(nlh2));  
-
-    char usermsg[MAX_PAYLOAD];
-    while (1) {
-    printf("Input your msg for sending to kernel: ");
-        scanf("%s", usermsg);
-
-        strcpy(NLMSG_DATA(nlh), usermsg);   //put "Hello" msg into nlh
-
-
-        printf("Sending message \" %s \" to kernel\n", usermsg);
-
-        ret = sendmsg(sock_fd, &msg, 0);   
-        printf("send ret: %d\n", ret); 
-
-        printf("Waiting for message from kernel\n");
-
-        /* Read message from kernel */
-    recvmsg(sock_fd, &resp, 0);  //msg is also receiver for read
-
-    printf("Received message payload: %s\n", (char *)NLMSG_DATA(nlh2));   
-
+	return 0;
 }
-    close(sock_fd);
 
-    return 0;
+static int parse_cb(struct nl_msg *msg, void *arg)
+{
+	return genl_handle_msg(msg, NULL);
+}
+
+static struct genl_cmd cmds[] = {
+	{
+		.c_id		= TASKSTATS_CMD_NEW,
+		.c_name		= "taskstats_new()",
+		.c_maxattr	= TASKSTATS_TYPE_MAX,
+		.c_attr_policy	= attr_policy,
+		.c_msg_parser	= &parse_cmd_new,
+	},
+};
+
+static struct genl_ops ops = {
+	.o_name = TASKSTATS_GENL_NAME,
+	.o_cmds = cmds,
+	.o_ncmds = ARRAY_SIZE(cmds),
+};
+
+int main(int argc, char *argv[])
+{
+	struct nl_sock *sock;
+	struct nl_msg *msg;
+	void *hdr;
+	int err;
+
+	sock = nl_cli_alloc_socket();
+	nl_cli_connect(sock, NETLINK_GENERIC);
+
+	if ((err = genl_register_family(&ops)) < 0)
+		nl_cli_fatal(err, "Unable to register Generic Netlink family");
+
+	if ((err = genl_ops_resolve(sock, &ops)) < 0)
+		nl_cli_fatal(err, "Unable to resolve family name");
+
+	if (genl_ctrl_resolve(sock, "nlctrl") != GENL_ID_CTRL)
+		nl_cli_fatal(NLE_INVAL, "Resolving of \"nlctrl\" failed");
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		nl_cli_fatal(NLE_NOMEM, "Unable to allocate netlink message");
+
+	hdr = genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, ops.o_id,
+			  0, 0, TASKSTATS_CMD_GET, TASKSTATS_GENL_VERSION);
+	if (hdr == NULL)
+		nl_cli_fatal(ENOMEM, "Unable to write genl header");
+
+	if ((err = nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, 1)) < 0)
+		nl_cli_fatal(err, "Unable to add attribute: %s", nl_geterror(err));
+
+	if ((err = nl_send_auto(sock, msg)) < 0)
+		nl_cli_fatal(err, "Unable to send message: %s", nl_geterror(err));
+
+	nlmsg_free(msg);
+
+	if ((err = nl_socket_modify_cb(sock, NL_CB_VALID, NL_CB_CUSTOM,
+			parse_cb, NULL)) < 0)
+		nl_cli_fatal(err, "Unable to modify valid message callback");
+
+	if ((err = nl_recvmsgs_default(sock)) < 0)
+		nl_cli_fatal(err, "Unable to receive message: %s", nl_geterror(err));
+
+	nl_close(sock);
+	nl_socket_free(sock);
+
+	return 0;
 }

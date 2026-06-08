@@ -6,22 +6,24 @@ AM_CFLAGS = -Wall -Werror -Wextra
 lib_LTLIBRARIES = libClp.la
 libClp_la_SOURCES = \
 					$(top_srcdir)/lib/tcp_handler.c \
-					$(top_srcdir)/lib/parser.c
+					$(top_srcdir)/lib/parser.c \
+					$(top_srcdir)/lib/netlink_handler.c
 libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL_CFLAGS)
 libClp_la_LIBADD = $(LIBNL_LIBS)
 
 pkginclude_HEADERS = \
 					$(top_srcdir)/lib/tcp_handler.h \
-					$(top_srcdir)/lib/parser.h
+					$(top_srcdir)/lib/parser.h \
+					$(top_srcdir)/lib/netlink_handler.h
 
 sbin_PROGRAMS = netvanguardd
 bin_PROGRAMS = netvanguard-cli
 
-netvanguardd_SOURCES = src/user/user.c
+netvanguardd_SOURCES = src/user_daemon/user.c
 netvanguardd_LDADD = libClp.la $(LIBNL_LIBS)
 netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL_CFLAGS)
 
-netvanguard_cli_SOURCES = src/cli/cli.c
+netvanguard_cli_SOURCES = src/user_cli/cli.c
 netvanguard_cli_LDADD = libClp.la
 netvanguard_cli_CFLAGS = $(AM_CFLAGS)
 
@@ -43,13 +45,13 @@ EXTRA_DIST = \
 	debian \
 	git-version-gen \
 	Kbuild \
-	src/kernel/kernel.c
+	src/kernel_module/kernel.c
 
 
 all-local:
-	@mkdir -p $(abs_builddir)/src/kernel
+	@mkdir -p $(abs_builddir)/src/kernel_module
 	@cp -p $(abs_srcdir)/Kbuild $(abs_builddir)/Kbuild
-	@cp -p $(abs_srcdir)/src/kernel/kernel.c $(abs_builddir)/src/kernel/kernel.c
+	@cp -p $(abs_srcdir)/src/kernel_module/kernel.c $(abs_builddir)/src/kernel_module/kernel.c
 	$(MAKE) -C $(KDIR) M=$(abs_builddir) modules
 
 install-exec-local:
