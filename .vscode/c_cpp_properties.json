@@ -11,7 +11,8 @@
                 "/usr/src/linux-headers-6.12.90+deb13.1-common/arch/x86/include/uapi",
                 "/usr/src/linux-headers-6.12.90+deb13.1-amd64/include",
                 "/usr/src/linux-headers-6.12.90+deb13.1-amd64/include/generated",
-                "/usr/src/linux-headers-6.12.90+deb13.1-amd64/arch/x86/include/generated"
+                "/usr/src/linux-headers-6.12.90+deb13.1-amd64/arch/x86/include/generated",
+                "/usr/include/libnl3"
             ],
             "defines": [
                 "__KERNEL__",

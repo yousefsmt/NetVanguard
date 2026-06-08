@@ -64,8 +64,8 @@ void help(void *pname)
 enum socket_type_t parse_args(struct socket_config_t* socket_config, struct socket_address_t* socket_address,
                               int argc, char* argv[], char* buffer, size_t buffer_size)
 {
-    enum socket_type_t socket_type;
-    enum socket_type_t socket_type_temp;
+    enum socket_type_t socket_type      = SERVER_SIDE;
+    enum socket_type_t socket_type_temp = SERVER_SIDE;
 
     int option_index = 0x00;
     int c            = 0x00;
@@ -107,17 +107,17 @@ enum socket_type_t parse_args(struct socket_config_t* socket_config, struct sock
             size_t idx  = (strncmp(argv[optind-0x01], "-i", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
             if ( socket_type == socket_type_temp )
             {
-                strncpy( socket_address->ip_addr, argv[idx], 15 );
+                strncpy( socket_address->ip_addr, argv[idx], 14 );
                 break;
             }
             else if ( socket_type == CLIENT_SIDE && socket_type_temp == SERVER_SIDE )
             {
-                strncpy( socket_config->server.ip_addr, argv[idx], 15 );
+                strncpy( socket_config->server.ip_addr, argv[idx], 14 );
                 break;
             }
             else if ( socket_type == SERVER_SIDE && socket_type_temp == CLIENT_SIDE )
             {
-                // strncpy( socket_config->server.ip_addr, argv[idx], 15 );
+                // strncpy( socket_config->server.ip_addr, argv[idx], 14 );
                 break;
             }
             break;

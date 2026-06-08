@@ -5,7 +5,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
-
+PKG_CHECK_MODULES([LIBNL], [libnl-3.0 >= 3.2.0 libnl-route-3.0 >= 3.2.0])
 AC_PROG_CC
 AM_PROG_AR
 
@@ -23,6 +23,8 @@ AC_CHECK_FILE([$KDIR/Makefile],
   [AC_MSG_ERROR([Kernel build directory $KDIR not found. Install linux-headers.])]
 )
 AC_SUBST([KDIR])
+AC_SUBST([LIBNL_CFLAGS])
+AC_SUBST([LIBNL_LIBS])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

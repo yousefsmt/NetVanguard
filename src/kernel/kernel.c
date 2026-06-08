@@ -1,81 +1,85 @@
+
+
 #include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/netfilter.h>
-#include <linux/netfilter_ipv4.h>
-#include <linux/ip.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <linux/string.h>
-#include <linux/byteorder/generic.h>
+#include <net/sock.h>
+#include <linux/netlink.h>
+#include <linux/skbuff.h>
 
-static struct nf_hook_ops *nf_tracer_ops = NULL;
-static struct nf_hook_ops *nf_tracer_out_ops = NULL;
+/*
+  refer to https://elixir.bootlin.com/linux/v5.15.13/source/include/linux/netlink.h
+*/
 
-static unsigned int nf_tracer_handler(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
-    if(skb==NULL) {
-        return NF_ACCEPT;
+#define MY_NETLINK 30  // cannot be larger than 31, otherwise we shall get "insmod: ERROR: could not insert module netlink_kernel.ko: No child processes"
+
+
+struct sock *nl_sk = NULL;
+
+static void myNetLink_recv_msg(struct sk_buff *skb)
+{
+    struct nlmsghdr *nlhead;
+    struct sk_buff *skb_out;
+    int pid, res, msg_size;
+    char *msg = "Hello msg from kernel";
+
+
+    printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
+
+    msg_size = strlen(msg);
+
+    nlhead = (struct nlmsghdr*)skb->data;    //nlhead message comes from skb's data... (sk_buff: unsigned char *data)
+
+    printk(KERN_INFO "MyNetlink has received: %s\n",(char*)nlmsg_data(nlhead));
+
+
+    pid = nlhead->nlmsg_pid; // Sending process port ID, will send new message back to the 'user space sender'
+
+
+    skb_out = nlmsg_new(msg_size, 0);    //nlmsg_new - Allocate a new netlink message: skb_out
+
+    if(!skb_out)
+    {
+        printk(KERN_ERR "Failed to allocate new skb\n");
+        return;
     }
 
-    struct iphdr * iph;
-    iph = ip_hdr(skb);
+    nlhead = nlmsg_put(skb_out, 0, 0, NLMSG_DONE, msg_size, 0);   // Add a new netlink message to an skb
 
-    if(iph && iph->protocol == IPPROTO_TCP ) {
-        struct tcphdr *tcph = tcp_hdr(skb);
-		if ( ntohs(tcph->source) == 2323 )
-		{
-			pr_info("source : %pI4:%hu | dest : %pI4:%hu | seq : %u | ack_seq : %u | window : %hu | csum : 0x%hx | urg_ptr %hu\n", &(iph->saddr),ntohs(tcph->source),&(iph->saddr),ntohs(tcph->dest), ntohl(tcph->seq), ntohl(tcph->ack_seq), ntohs(tcph->window), ntohs(tcph->check), ntohs(tcph->urg_ptr));
-		}
-    }
+    NETLINK_CB(skb_out).dst_group = 0;                  
 
-    return NF_ACCEPT;
+
+    strncpy(nlmsg_data(nlhead), msg, msg_size); //char *strncpy(char *dest, const char *src, size_t count)
+
+    res = nlmsg_unicast(nl_sk, skb_out, pid); 
+
+    if(res < 0)
+        printk(KERN_INFO "Error while sending back to user\n");
 }
 
+static int __init myNetLink_init(void)
+{
+    struct netlink_kernel_cfg cfg = {
+        .input = myNetLink_recv_msg,
+    };
 
-static int __init nf_tracer_init(void) {
-
-    nf_tracer_ops = (struct nf_hook_ops*)kcalloc(1,  sizeof(struct nf_hook_ops), GFP_KERNEL);
-
-    if(nf_tracer_ops!=NULL) {
-        nf_tracer_ops->hook = (nf_hookfn*)nf_tracer_handler;
-        nf_tracer_ops->hooknum = NF_INET_PRE_ROUTING;
-        nf_tracer_ops->pf = NFPROTO_IPV4;
-        nf_tracer_ops->priority = NF_IP_PRI_FIRST;
-
-        nf_register_net_hook(&init_net, nf_tracer_ops);
+       /*netlink_kernel_create() returns a pointer, should be checked with == NULL */
+    nl_sk = netlink_kernel_create(&init_net, MY_NETLINK, &cfg);
+    printk("Entering: %s, protocol family = %d \n",__FUNCTION__, MY_NETLINK);
+    if(!nl_sk)
+    {
+        printk(KERN_ALERT "Error creating socket.\n");
+        return -10;
     }
 
-    nf_tracer_out_ops = (struct nf_hook_ops*)kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-
-    if(nf_tracer_out_ops!=NULL) {
-        nf_tracer_out_ops->hook = (nf_hookfn*)nf_tracer_handler;
-        nf_tracer_out_ops->hooknum = NF_INET_LOCAL_OUT;
-        nf_tracer_out_ops->pf = NFPROTO_IPV4;
-        nf_tracer_out_ops->priority = NF_IP_PRI_FIRST;
-
-        nf_register_net_hook(&init_net, nf_tracer_out_ops);
-    }
-
-	printk( KERN_INFO "NetVanguard Init\n" );
-
+    printk("MyNetLink Init OK!\n");
     return 0;
 }
 
-static void __exit nf_tracer_exit(void) {
-
-    if(nf_tracer_ops != NULL) {
-        nf_unregister_net_hook(&init_net, nf_tracer_ops);
-        kfree(nf_tracer_ops);
-    }
-
-    if(nf_tracer_out_ops != NULL) {
-        nf_unregister_net_hook(&init_net, nf_tracer_out_ops);
-        kfree(nf_tracer_out_ops);
-    }
-
-	printk( KERN_INFO "NetVanguard Exit\n" );
+static void __exit myNetLink_exit(void)
+{
+    printk(KERN_INFO "exiting myNetLink module\n");
+    netlink_kernel_release(nl_sk);
 }
 
-module_init(nf_tracer_init);
-module_exit(nf_tracer_exit);
-
+module_init(myNetLink_init);
+module_exit(myNetLink_exit);
 MODULE_LICENSE("GPL");
