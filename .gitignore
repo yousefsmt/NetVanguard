@@ -11,6 +11,8 @@ bscconfig.h.in
 *.pc
 *~
 build
+ar-lib
+*config.h*
 
 *.*~
 *.sw?
