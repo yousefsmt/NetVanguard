@@ -3,9 +3,13 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = libClp.la
-libClp_la_SOURCES = $(top_srcdir)/lib/tcp_handler.c
+libClp_la_SOURCES = \
+					$(top_srcdir)/lib/tcp_handler.c \
+					$(top_srcdir)/lib/parser.c
 
-pkginclude_HEADERS = $(top_srcdir)/lib/tcp_handler.h
+pkginclude_HEADERS = \
+					$(top_srcdir)/lib/tcp_handler.h \
+					$(top_srcdir)/lib/parser.h
 
 sbin_PROGRAMS = netvanguardd
 bin_PROGRAMS = netvanguard-cli
@@ -19,6 +23,7 @@ netvanguard_cli_LDADD = libClp.la
 check_PROGRAMS = tests/tcp_simple_connection/tcp_test
 
 tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
+tests_tcp_simple_connection_tcp_test_LDADD = libClp.la
 tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) -Wall -Werror -Wextra
 
 EXTRA_DIST = \

@@ -1,5 +1,5 @@
-#ifndef NETVANGUARD_TESTS_INCLUDE_TCP_HANDLER_H_
-#define NETVANGUARD_TESTS_INCLUDE_TCP_HANDLER_H_
+#ifndef NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_
+#define NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_
 
 #include <stdint.h>
 #include <netinet/in.h>
@@ -7,13 +7,16 @@
 enum socket_type_t
 {
     SERVER_SIDE,
-    CLIENT_SIDE
+    CLIENT_SIDE,
+    ERROR
 };
 
 struct server_side
 {
     struct sockaddr_in addr;
+    char               ip_addr[15];
     socklen_t          length;
+    uint16_t           port_addr;
 };
 
 struct client_side
@@ -52,4 +55,4 @@ ssize_t tcp_socket_read( struct socket_config_t* socket_config,
 int tcp_socket_close( struct socket_config_t* socket_config,
                       enum   socket_type_t    socket_type );
 
-#endif /* NETVANGUARD_TESTS_INCLUDE_TCP_HANDLER_H_ */
+#endif /* NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_ */
