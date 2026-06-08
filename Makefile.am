@@ -8,8 +8,8 @@ libClp_la_SOURCES = \
 					$(top_srcdir)/lib/tcp_handler.c \
 					$(top_srcdir)/lib/parser.c \
 					$(top_srcdir)/lib/netlink_handler.c
-libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL_CFLAGS)
-libClp_la_LIBADD = $(LIBNL_LIBS)
+libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+libClp_la_LIBADD = $(LIBNL3_LIBS)
 
 pkginclude_HEADERS = \
 					$(top_srcdir)/lib/tcp_handler.h \
@@ -20,8 +20,8 @@ sbin_PROGRAMS = netvanguardd
 bin_PROGRAMS = netvanguard-cli
 
 netvanguardd_SOURCES = src/user_daemon/user.c
-netvanguardd_LDADD = libClp.la $(LIBNL_LIBS)
-netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL_CFLAGS)
+netvanguardd_LDADD = libClp.la $(LIBNL3_LIBS)
+netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 netvanguard_cli_SOURCES = src/user_cli/cli.c
 netvanguard_cli_LDADD = libClp.la
@@ -32,12 +32,12 @@ check_PROGRAMS = \
 				tests/netlink_simple_connection/netlink_test
 
 tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
-tests_tcp_simple_connection_tcp_test_LDADD = libClp.la
-tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) -Wall -Werror -Wextra
+tests_tcp_simple_connection_tcp_test_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) -Wall -Werror -Wextra
 
 tests_netlink_simple_connection_netlink_test_SOURCES = tests/netlink_simple_connection/netlink_connection.c
-tests_netlink_simple_connection_netlink_test_LDADD = libClp.la $(LIBNL_LIBS)
-tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL_CFLAGS)
+tests_netlink_simple_connection_netlink_test_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) -Wall -Werror -Wextra
 
 EXTRA_DIST = \
 	VERSION \

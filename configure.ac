@@ -1,18 +1,23 @@
 AC_PREREQ([2.69])
 AC_INIT([NetVanguard], [1.0], [yoosefsamet@gmail.com])
+
 AC_CONFIG_SRCDIR([lib/tcp_handler.c])
+AC_CONFIG_SRCDIR([lib/netlink_handler.c])
+AC_CONFIG_SRCDIR([lib/parser.c])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
-PKG_CHECK_MODULES([LIBNL], [libnl-3.0 >= 3.2.0 libnl-route-3.0 >= 3.2.0])
+PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.2.0 libnl-route-3.0 >= 3.2.0 libnl-genl-3.0 >= 3.2.0 libnl-nf-3.0 >= 3.2.0 libnl-cli-3.0 >= 3.2.0])
+
 AC_PROG_CC
 AM_PROG_AR
 
 LT_INIT
 AC_PROG_MAKE_SET
 
-AC_ARG_WITH([kernel],
+AC_ARG_WITH([kernel_module],
   [AS_HELP_STRING([--with-kernel=DIR], [Path to the kernel build directory])],
   [KDIR="$withval"],
   [KDIR="/lib/modules/$(uname -r)/build"]
