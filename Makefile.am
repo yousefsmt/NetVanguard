@@ -1,15 +1,34 @@
-KDIR = @KDIR@
-EXTRA_DIST = src/kernel/kernel.c Kbuild
-TEST_DIR = tests
+ACLOCAL_AMFLAGS = -I m4
 
-check_PROGRAMS = $(TEST_DIR)/tcp_simple_connection/tcp_test
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_srcdir)/include
 
-__TEST_DIR__tcp_simple_connection_tcp_test_SOURCES = \
-	$(TEST_DIR)/tcp_simple_connection/main.c \
-	$(TEST_DIR)/tcp_simple_connection/src/tcp_handler.c \
-	$(TEST_DIR)/tcp_simple_connection/include/tcp_handler.h
+lib_LTLIBRARIES = libClp.la
+libClp_la_SOURCES = $(top_srcdir)/lib/tcp_handler.c
 
-__TEST_DIR__tcp_simple_connection_tcp_test_CFLAGS = -I$(srcdir)/$(TEST_DIR)/tcp_simple_connection/include -Wall -Werror -Wextra
+pkginclude_HEADERS = $(top_srcdir)/lib/tcp_handler.h
+
+sbin_PROGRAMS = netvanguardd
+bin_PROGRAMS = netvanguard-cli
+
+netvanguardd_SOURCES = src/user/user.c
+netvanguardd_LDADD = libClp.la
+
+netvanguard_cli_SOURCES = src/cli/cli.c
+netvanguard_cli_LDADD = libClp.la
+
+check_PROGRAMS = tests/tcp_simple_connection/tcp_test
+
+tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
+tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) -Wall -Werror -Wextra
+
+EXTRA_DIST = \
+	VERSION \
+	README.md \
+	debian \
+	git-version-gen \
+	Kbuild \
+	src/kernel/kernel.c
+
 
 all-local:
 	@mkdir -p $(abs_builddir)/src/kernel
