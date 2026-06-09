@@ -7,15 +7,13 @@
 #include "kernel.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Gemini Example");
-MODULE_DESCRIPTION("Netlink TLV Firewall Example");
+MODULE_AUTHOR("Yousef.smt");
+MODULE_DESCRIPTION("NetVanguard: lightweight firewall");
 
-// Global variable to hold our blocked IP (in network byte order)
+
 static __be32 blocked_ip = 0;
 
-/* ------------------------------------------------------------------
- * 1. NETFILTER HOOK LOGIC
- * ------------------------------------------------------------------ */
+
 static unsigned int fw_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     struct iphdr *iph;
@@ -41,15 +39,13 @@ static struct nf_hook_ops fw_nf_ops = {
     .priority = NF_IP_PRI_FIRST,
 };
 
-/* ------------------------------------------------------------------
- * 2. NETLINK TLV LOGIC
- * ------------------------------------------------------------------ */
-// Policy defining what TLVs we expect (security measure)
+
+
 static const struct nla_policy fw_genl_policy[FW_ATTR_MAX + 1] = {
     [FW_ATTR_SRC_IP] = { .type = NLA_U32 },
 };
 
-// Callback when user-space sends the FW_CMD_BLOCK_IP command
+
 static int fw_nl_block_ip_cb(struct sk_buff *skb, struct genl_info *info)
 {
     __be32 new_ip;
