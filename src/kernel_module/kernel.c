@@ -95,16 +95,15 @@ static int __init fw_mod_init(void)
 {
     int ret;
 
-    // Register Netlink Family
     ret = genl_register_family(&fw_genl_family);
-    if (ret) {
-        printk(KERN_ERR "FW_BLOCKER: Failed to register Netlink family\n");
+    if ( ret < 0 )
+    {
+        printk( KERN_ERR "FW_BLOCKER: Failed to register Netlink family error id[%d]\n", ret );
         return ret;
     }
 
-    // Register Netfilter Hook
     ret = nf_register_net_hook(&init_net, &fw_nf_ops);
-    if (ret) {
+    if ( ret < 0 ) {
         genl_unregister_family(&fw_genl_family);
         printk(KERN_ERR "FW_BLOCKER: Failed to register Netfilter hook\n");
         return ret;

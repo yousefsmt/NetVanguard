@@ -1,73 +1,56 @@
 #include <arpa/inet.h>
 
 #include "netlink_handler.h"
-
-static int family_id;
+#include "parser.h"
 
 int netlink_socket_init( struct nl_sock *sock )
 {
-    sock = nl_cli_alloc_socket();
-    if ( sock == NULL )
-    {
-		nl_cli_fatal( ENOBUFS, "Unable to allocate netlink socket" );
-	}
+    int family_id;
+    sock = nl_socket_alloc();
+    genl_connect(sock);
 
-    ( void )nl_cli_connect( sock, NETLINK_GENERIC );
-
-    family_id = genl_ctrl_resolve( sock, FW_NETLINK_NAME );
-    if ( family_id != GENL_ID_CTRL )
-    {
-        nl_cli_fatal( NLE_INVAL, "Resolving of " FW_NETLINK_NAME " failed" );
+    // 2. Resolve the family ID using the name we defined in the kernel
+    family_id = genl_ctrl_resolve(sock, FW_NETLINK_NAME);
+    if (family_id < 0) {
+        fprintf(stderr, "Failed to resolve Netlink family! Is the kernel module loaded?\n");
+        nl_socket_free(sock);
+        return -1;
     }
-
-    return 0;
+    return family_id;
 }
 
-int netlink_socket_init_msg( struct nl_msg *msg )
+int netlink_socket_pack_msg( struct nl_msg *msg, void *hdr, int family_id, int attrtype, uint32_t ip_address )
 {
+    ( void )hdr;
+    ( void )attrtype;
+
+    // 3. Allocate a new Netlink message
     msg = nlmsg_alloc();
-    if ( msg == NULL )
-    {
-        nl_cli_fatal( NLE_NOMEM, "Unable to allocate netlink message" );
-    }
-    return 0;
-}
 
-int netlink_socket_add_header( struct nl_msg *msg, void *hdr )
-{
-    hdr = genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0, FW_CMD_BLOCK_IP, FW_NETLINK_VERSION);
-    if ( hdr == NULL )
-    {
-        nl_cli_fatal(ENOMEM, "Unable to write genl header");
-    }
-    return 0;
-}
+    // 4. Setup the Generic Netlink Header (Command: BLOCK_IP)
+    genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0, FW_CMD_BLOCK_IP, FW_NETLINK_VERSION);
 
-int netlink_socket_add_data( struct nl_msg *msg, int attrtype, const char *ip_address )
-{
-    in_addr_t ip;
-    int err;
+    // 5. PACK THE TLV: Type = FW_ATTR_SRC_IP, Length/Value = ip_to_block
+    nla_put_u32(msg, FW_ATTR_SRC_IP, ip_address);
 
-    ip = inet_addr( ip_address );
-    if ( ip == (uint32_t)-1 )
-    {
-        nl_cli_fatal( 0, "ip address invalid" );
-    }
-    err = nla_put_u32( msg, attrtype, ip );
-    if ( err < 0 )
-    {
-        nl_cli_fatal(err, "Unable to add attribute: %s", nl_geterror(err));
-    }
     return 0;
 }
 
 int netlink_socket_send_msg( struct nl_sock *sock, struct nl_msg *msg )
 {
-    int err;
-    err = nl_send_auto(sock, msg);
-    if ( err < 0)
+    if ( sock && msg )
     {
-        nl_cli_fatal( err, "Unable to send message: %s", nl_geterror(err) );
+        int err;
+        err = nl_send_auto(sock, msg);
+        if ( err < 0)
+        {
+            nl_cli_fatal( err, "Unable to send message: %s", nl_geterror(err) );
+        }
+    }
+    else
+    {
+        debug_msg("sock and msg doesn't exist");
+        return -1;
     }
     return 0;
 }
