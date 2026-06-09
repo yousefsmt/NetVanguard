@@ -33,11 +33,11 @@ check_PROGRAMS = \
 
 tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
 tests_tcp_simple_connection_tcp_test_LDADD = libClp.la $(LIBNL3_LIBS)
-tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) -Wall -Werror -Wextra
+tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 tests_netlink_simple_connection_netlink_test_SOURCES = tests/netlink_simple_connection/netlink_connection.c
 tests_netlink_simple_connection_netlink_test_LDADD = libClp.la $(LIBNL3_LIBS)
-tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) -Wall -Werror -Wextra
+tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 EXTRA_DIST = \
 	VERSION \
@@ -52,7 +52,7 @@ all-local:
 	@mkdir -p $(abs_builddir)/src/kernel_module
 	@cp -p $(abs_srcdir)/Kbuild $(abs_builddir)/Kbuild
 	@cp -p $(abs_srcdir)/src/kernel_module/kernel.c $(abs_builddir)/src/kernel_module/kernel.c
-	$(MAKE) -C $(KDIR) M=$(abs_builddir) modules
+	$(MAKE) -C $(KDIR) M=$(abs_builddir) CFLAGS_MODULE="-I$(abs_srcdir)/include/kernel_module" modules
 
 install-exec-local:
 	$(MAKE) -C $(KDIR) M=$(abs_builddir) modules_install

@@ -1,85 +1,125 @@
-
-
 #include <linux/module.h>
-#include <net/sock.h>
-#include <linux/netlink.h>
-#include <linux/skbuff.h>
+#include <linux/kernel.h>
+#include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
+#include <linux/ip.h>
+#include <net/genetlink.h>
+#include "kernel.h"
 
-/*
-  refer to https://elixir.bootlin.com/linux/v5.15.13/source/include/linux/netlink.h
-*/
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Gemini Example");
+MODULE_DESCRIPTION("Netlink TLV Firewall Example");
 
-#define MY_NETLINK 30  // cannot be larger than 31, otherwise we shall get "insmod: ERROR: could not insert module netlink_kernel.ko: No child processes"
+// Global variable to hold our blocked IP (in network byte order)
+static __be32 blocked_ip = 0;
 
-
-struct sock *nl_sk = NULL;
-
-static void myNetLink_recv_msg(struct sk_buff *skb)
+/* ------------------------------------------------------------------
+ * 1. NETFILTER HOOK LOGIC
+ * ------------------------------------------------------------------ */
+static unsigned int fw_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
-    struct nlmsghdr *nlhead;
-    struct sk_buff *skb_out;
-    int pid, res, msg_size;
-    char *msg = "Hello msg from kernel";
+    struct iphdr *iph;
 
+    if (!skb) return NF_ACCEPT;
 
-    printk(KERN_INFO "Entering: %s\n", __FUNCTION__);
+    iph = ip_hdr(skb);
+    if (!iph) return NF_ACCEPT;
 
-    msg_size = strlen(msg);
-
-    nlhead = (struct nlmsghdr*)skb->data;    //nlhead message comes from skb's data... (sk_buff: unsigned char *data)
-
-    printk(KERN_INFO "MyNetlink has received: %s\n",(char*)nlmsg_data(nlhead));
-
-
-    pid = nlhead->nlmsg_pid; // Sending process port ID, will send new message back to the 'user space sender'
-
-
-    skb_out = nlmsg_new(msg_size, 0);    //nlmsg_new - Allocate a new netlink message: skb_out
-
-    if(!skb_out)
-    {
-        printk(KERN_ERR "Failed to allocate new skb\n");
-        return;
+    // If the packet's source IP matches our blocked IP, drop it!
+    if (blocked_ip != 0 && iph->saddr == blocked_ip) {
+        printk_ratelimited(KERN_INFO "FW_BLOCKER: Dropping packet from %pI4\n", &iph->saddr);
+        return NF_DROP;
     }
 
-    nlhead = nlmsg_put(skb_out, 0, 0, NLMSG_DONE, msg_size, 0);   // Add a new netlink message to an skb
-
-    NETLINK_CB(skb_out).dst_group = 0;                  
-
-
-    strncpy(nlmsg_data(nlhead), msg, msg_size); //char *strncpy(char *dest, const char *src, size_t count)
-
-    res = nlmsg_unicast(nl_sk, skb_out, pid); 
-
-    if(res < 0)
-        printk(KERN_INFO "Error while sending back to user\n");
+    return NF_ACCEPT;
 }
 
-static int __init myNetLink_init(void)
-{
-    struct netlink_kernel_cfg cfg = {
-        .input = myNetLink_recv_msg,
-    };
+static struct nf_hook_ops fw_nf_ops = {
+    .hook     = fw_hook_func,
+    .pf       = NFPROTO_IPV4,
+    .hooknum  = NF_INET_PRE_ROUTING,
+    .priority = NF_IP_PRI_FIRST,
+};
 
-       /*netlink_kernel_create() returns a pointer, should be checked with == NULL */
-    nl_sk = netlink_kernel_create(&init_net, MY_NETLINK, &cfg);
-    printk("Entering: %s, protocol family = %d \n",__FUNCTION__, MY_NETLINK);
-    if(!nl_sk)
-    {
-        printk(KERN_ALERT "Error creating socket.\n");
-        return -10;
+/* ------------------------------------------------------------------
+ * 2. NETLINK TLV LOGIC
+ * ------------------------------------------------------------------ */
+// Policy defining what TLVs we expect (security measure)
+static const struct nla_policy fw_genl_policy[FW_ATTR_MAX + 1] = {
+    [FW_ATTR_SRC_IP] = { .type = NLA_U32 },
+};
+
+// Callback when user-space sends the FW_CMD_BLOCK_IP command
+static int fw_nl_block_ip_cb(struct sk_buff *skb, struct genl_info *info)
+{
+    __be32 new_ip;
+
+    if (!info->attrs[FW_ATTR_SRC_IP]) {
+        printk(KERN_ERR "FW_BLOCKER: Missing IP attribute\n");
+        return -EINVAL;
     }
 
-    printk("MyNetLink Init OK!\n");
+    // Extract the Value from the TLV
+    new_ip = nla_get_u32(info->attrs[FW_ATTR_SRC_IP]);
+    
+    // Update our global firewall rule safely
+    WRITE_ONCE(blocked_ip, new_ip);
+    
+    printk(KERN_INFO "FW_BLOCKER: Rule updated. Now blocking: %pI4\n", &blocked_ip);
     return 0;
 }
 
-static void __exit myNetLink_exit(void)
+// Map commands to callbacks
+static const struct genl_ops fw_genl_ops[] = {
+    {
+        .cmd    = FW_CMD_BLOCK_IP,
+        .flags  = 0,
+        .policy = fw_genl_policy,
+        .doit   = fw_nl_block_ip_cb,
+    },
+};
+
+// Define the Netlink family structure
+static struct genl_family fw_genl_family = {
+    .name     = FW_NETLINK_NAME,
+    .version  = FW_NETLINK_VERSION,
+    .maxattr  = FW_ATTR_MAX,
+    .ops      = fw_genl_ops,
+    .n_ops    = ARRAY_SIZE(fw_genl_ops),
+};
+
+/* ------------------------------------------------------------------
+ * 3. MODULE INIT / EXIT
+ * ------------------------------------------------------------------ */
+static int __init fw_mod_init(void)
 {
-    printk(KERN_INFO "exiting myNetLink module\n");
-    netlink_kernel_release(nl_sk);
+    int ret;
+
+    // Register Netlink Family
+    ret = genl_register_family(&fw_genl_family);
+    if (ret) {
+        printk(KERN_ERR "FW_BLOCKER: Failed to register Netlink family\n");
+        return ret;
+    }
+
+    // Register Netfilter Hook
+    ret = nf_register_net_hook(&init_net, &fw_nf_ops);
+    if (ret) {
+        genl_unregister_family(&fw_genl_family);
+        printk(KERN_ERR "FW_BLOCKER: Failed to register Netfilter hook\n");
+        return ret;
+    }
+
+    printk(KERN_INFO "FW_BLOCKER: Module loaded successfully.\n");
+    return 0;
 }
 
-module_init(myNetLink_init);
-module_exit(myNetLink_exit);
-MODULE_LICENSE("GPL");
+static void __exit fw_mod_exit(void)
+{
+    nf_unregister_net_hook(&init_net, &fw_nf_ops);
+    genl_unregister_family(&fw_genl_family);
+    printk(KERN_INFO "FW_BLOCKER: Module unloaded.\n");
+}
+
+module_init(fw_mod_init);
+module_exit(fw_mod_exit);
