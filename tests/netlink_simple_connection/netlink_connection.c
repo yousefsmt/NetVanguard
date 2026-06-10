@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
     err = netlink_socket_pack_msg( &socket, &msg, &hdr, /* file descriptor, message, headder*/
                                    family_id, FW_ATTR_SRC_IP, /* family id, attribute send message */
-                                   FW_CMD_BLOCK_IP, ip_to_block ); /* which command must be send, ip for this rule */
+                                   FW_CMD_REJECT_IP, ip_to_block ); /* which command must be send, ip for this rule */
     if ( err < 0 )
     {
         fprintf(stderr, "During packing message error occur!!\n");

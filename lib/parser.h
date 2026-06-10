@@ -1,5 +1,5 @@
-#ifndef NETVANGUARD_LIB_INCLUDE_PARSER_H_
-#define NETVANGUARD_LIB_INCLUDE_PARSER_H_
+#ifndef NETVANGUARD_LIB_PARSER_H_
+#define NETVANGUARD_LIB_PARSER_H_
 
 #include "tcp_handler.h"
 
@@ -14,4 +14,4 @@ void               debug_msg(const char* fmt, ...);
 void               help(void *pname);
 
 
-#endif /* NETVANGUARD_LIB_INCLUDE_PARSER_H_ */
+#endif /* NETVANGUARD_LIB_PARSER_H_ */

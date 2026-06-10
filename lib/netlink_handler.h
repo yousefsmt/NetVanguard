@@ -1,5 +1,5 @@
-#ifndef NETVANGUARD_LIB_INCLUDE_NETLINK_HANDLER_H_
-#define NETVANGUARD_LIB_INCLUDE_NETLINK_HANDLER_H_
+#ifndef NETVANGUARD_LIB_NETLINK_HANDLER_H_
+#define NETVANGUARD_LIB_NETLINK_HANDLER_H_
 
 #include <netlink/netlink.h>
 #include "include/kernel_module/kernel.h"
@@ -13,4 +13,4 @@ int netlink_socket_send_msg( struct nl_sock **sock, struct nl_msg **msg );
 
 int netlink_socket_free( struct nl_sock **sock, struct nl_msg **msg );
 
-#endif /* NETVANGUARD_LIB_INCLUDE_NETLINK_HANDLER_H_ */
+#endif /* NETVANGUARD_LIB_NETLINK_HANDLER_H_ */

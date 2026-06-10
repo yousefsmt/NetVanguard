@@ -1,5 +1,5 @@
-#ifndef NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_
-#define NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_
+#ifndef NETVANGUARD_LIB_TCP_HANDLER_H_
+#define NETVANGUARD_LIB_TCP_HANDLER_H_
 
 #include <stdint.h>
 #include <netinet/in.h>
@@ -55,4 +55,4 @@ ssize_t tcp_socket_read( struct socket_config_t* socket_config,
 int tcp_socket_close( struct socket_config_t* socket_config,
                       enum   socket_type_t    socket_type );
 
-#endif /* NETVANGUARD_LIB_INCLUDE_TCP_HANDLER_H_ */
+#endif /* NETVANGUARD_LIB_TCP_HANDLER_H_ */

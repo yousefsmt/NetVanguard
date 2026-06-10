@@ -4,21 +4,24 @@
 #define FW_NETLINK_NAME    "NETVANGUARD"
 #define FW_NETLINK_VERSION ( 1 )
 
-enum fw_commands
+enum van_cmd_t
 {
     FW_CMD_UNSPEC,
+    FW_CMD_ACCEPT_IP,
     FW_CMD_BLOCK_IP,
-    __FW_CMD_MAX,
+    FW_CMD_REJECT_IP,
+    __FW_CMD_MAX
 };
 
 #define FW_CMD_MAX (__FW_CMD_MAX - 1)
 
-
-enum fw_attributes
+enum van_attr_t
 {
     FW_ATTR_UNSPEC,
     FW_ATTR_SRC_IP,
-    __FW_ATTR_MAX,
+    FW_ATTR_PORT,
+    FW_ATTR_DEST_IP,
+    __FW_ATTR_MAX
 };
 
 #define FW_ATTR_MAX (__FW_ATTR_MAX - 1)
