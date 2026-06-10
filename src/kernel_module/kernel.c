@@ -11,6 +11,8 @@ static __be32 accept_ip;
 static __be32 blocked_ip;
 static __be32 reject_ip;
 
+static int pack_reply_message( struct genl_info **info, u32 status );
+
 static int van_accept_hook( struct sk_buff *skb, struct genl_info *info )
 {
     __be32 new_ip;
@@ -23,6 +25,12 @@ static int van_accept_hook( struct sk_buff *skb, struct genl_info *info )
     
     new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
     WRITE_ONCE( accept_ip, new_ip );
+
+    if ( pack_reply_message( &info, FW_REP_SRC_ACCEPT_IP ) < 0 )
+    {
+        printk(KERN_ERR "NetVanguard: Reply failed\n");
+        return -EINVAL;
+    }
 
     printk( KERN_INFO "NetVanguard: Rule updated. Now acceptable: %pI4\n", &accept_ip );
 
@@ -42,6 +50,12 @@ static int van_block_hook( struct sk_buff *skb, struct genl_info *info )
     new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
     WRITE_ONCE( blocked_ip, new_ip );
 
+    if ( pack_reply_message( &info, FW_REP_SRC_BLOCK_IP ) < 0 )
+    {
+        printk(KERN_ERR "NetVanguard: Reply failed\n");
+        return -EINVAL;
+    }
+
     printk( KERN_INFO "NetVanguard: Rule updated. Now blocking: %pI4\n", &blocked_ip );
 
     return 0;
@@ -60,6 +74,12 @@ static int van_reject_hook( struct sk_buff *skb, struct genl_info *info )
     new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
     WRITE_ONCE( reject_ip, new_ip );
 
+    if ( pack_reply_message( &info, FW_REP_ICMP ) < 0 )
+    {
+        printk(KERN_ERR "NetVanguard: Reply failed\n");
+        return -EINVAL;
+    }
+
     printk( KERN_INFO "NetVanguard: Rule updated. Now rejection: %pI4\n", &reject_ip );
 
     return 0;
@@ -69,7 +89,8 @@ static const struct nla_policy van_attr_policy[FW_ATTR_MAX + 1] =
 {
     [FW_ATTR_SRC_IP]  = { .type = NLA_U32 },
     [FW_ATTR_PORT]    = { .type = NLA_U16 },
-    [FW_ATTR_DEST_IP] = { .type = NLA_U32 }
+    [FW_ATTR_DEST_IP] = { .type = NLA_U32 },
+    [FW_ATTR_REPLY]   = { .type = NLA_U32 }
 };
 
 static const struct genl_ops van_ops[] = 
@@ -77,54 +98,70 @@ static const struct genl_ops van_ops[] =
     {
         .doit   = van_accept_hook,
         .policy = van_attr_policy,
-        .cmd = FW_CMD_ACCEPT_IP,
+        .cmd    = FW_CMD_ACCEPT_IP,
         .flags  = 0
     },
     {
         .doit   = van_block_hook,
         .policy = van_attr_policy,
-        .cmd = FW_CMD_BLOCK_IP,
+        .cmd    = FW_CMD_BLOCK_IP,
         .flags  = 0
     },
     {
         .doit   = van_reject_hook,
         .policy = van_attr_policy,
-        .cmd = FW_CMD_REJECT_IP,
+        .cmd    = FW_CMD_REJECT_IP,
         .flags  = 0
     }
 };
 
 static struct genl_family van_family = 
 {
-    .name = FW_NETLINK_NAME,
+    .name    = FW_NETLINK_NAME,
     .version = FW_NETLINK_VERSION,
     .maxattr = FW_ATTR_MAX,
-    .policy = van_attr_policy,
-    .ops = van_ops,
-    .n_ops = ARRAY_SIZE( van_ops )
+    .policy  = van_attr_policy,
+    .ops     = van_ops,
+    .n_ops   = ARRAY_SIZE( van_ops )
 };
 
-// static int pack_reply_message( struct genl_info **info )
-// {
-//     struct sk_buff *skb;
-//     void           *hdr;
+static int pack_reply_message( struct genl_info **info, u32 status )
+{
+    struct sk_buff *skb;
+    void           *hdr;
+    int             ret;
 
-//     skb = genlmsg_new( GENLMSG_DEFAULT_SIZE, GFP_KERNEL );
-//     if ( skb == NULL )
-//     {
-//         printk( KERN_ERR "NetVanguard: Failed to allocate message for reply\n" );
-//         return -ENOMEM;
-//     }
+    skb = genlmsg_new( GENLMSG_DEFAULT_SIZE, GFP_KERNEL );
+    if ( skb == NULL )
+    {
+        printk( KERN_ERR "NetVanguard: Failed to allocate message for reply\n" );
+        return -ENOMEM;
+    }
 
-//     hdr = genlmsg_put_reply( skb, *info, &van_family, 0, FW_CMD_REPLY );
-//     if ( hdr == NULL )
-//     {
-//         printk( KERN_ERR "NetVanguard: Failed to allocate header\n" );
-//         return -ENOMEM;
-//     }
+    hdr = genlmsg_put_reply( skb, *info, &van_family, 0, FW_CMD_REPLY );
+    if ( hdr == NULL )
+    {
+        nlmsg_free( skb );
+        printk( KERN_ERR "NetVanguard: Failed to allocate header\n" );
+        return -ENOMEM;
+    }
 
-//     nla_put_u32( skb, )
-// }
+    if ( nla_put_u32( skb, FW_ATTR_REPLY, status ) )
+    {
+        genlmsg_cancel( skb, hdr );
+        nlmsg_free( skb );
+        printk( KERN_ERR "NetVanguard: Failed to send message\n" );
+        return -EINVAL;
+    }
+
+	genlmsg_end( skb, hdr );
+
+	ret = genlmsg_reply( skb, *info );
+
+    printk( KERN_INFO "NetVanguard: Send message for reply\n" );
+
+    return ret;
+}
 
 // static unsigned int fw_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 // {
@@ -204,7 +241,7 @@ static void __exit netvanguard_exit( void )
     {
         printk( KERN_ERR "NetVanguard: Failed to register Netlink family error id[%d]\n", ret );
     }
-    printk(KERN_INFO "FW_BLOCKER: Module unloaded.\n");
+    printk(KERN_INFO "NetVanguard: Module unloaded.\n");
 }
 
 module_init(netvanguard_init);

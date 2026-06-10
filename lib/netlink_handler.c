@@ -4,6 +4,108 @@
 
 #include "netlink_handler.h"
 
+static int reply_to_str( uint32_t id, char *buffer )
+{
+    switch ( id )
+    {
+    case FW_REP_SRC_BLOCK_IP:
+    {
+        strncpy( buffer, "FW_REP_SRC_BLOCK_IP", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_DEST_BLOCK_IP:
+    {
+        strncpy( buffer, "FW_REP_DEST_BLOCK_IP", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_SRC_ACCEPT_IP:
+    {
+        strncpy( buffer, "FW_REP_SRC_ACCEPT_IP", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_DEST_ACCEPT_IP:
+    {
+        strncpy( buffer, "FW_REP_DEST_ACCEPT_IP", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_SRC_BLOCK_PORT:
+    {
+        strncpy( buffer, "FW_REP_SRC_BLOCK_PORT", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_DEST_BLOCK_PORT:
+    {
+        strncpy( buffer, "FW_REP_DEST_BLOCK_PORT", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_SRC_ACCEPT_PORT:
+    {
+        strncpy( buffer, "FW_REP_SRC_ACCEPT_PORT", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_DEST_ACCEPT_PORT:
+    {
+        strncpy( buffer, "FW_REP_DEST_ACCEPT_PORT", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    case FW_REP_ICMP:
+    {
+        strncpy( buffer, "FW_REP_ICMP", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    default:
+    {
+        strncpy( buffer, "Invalid ID", BUFFER_MAPPER_SIZE );
+        break;
+    }
+    }
+
+    return 0;
+}
+
+static int netlink_socket_reply_procces( struct nl_msg *msg, void *arg )
+{
+    ( void )arg;
+
+	struct genlmsghdr *genlhdr = nlmsg_data( nlmsg_hdr( msg ) );
+	struct nlattr	  *tb[FW_ATTR_MAX + 1];
+
+    char               buffer[BUFFER_MAPPER_SIZE];
+
+    uint32_t           id;
+
+    int		           err;
+
+    memset( buffer, 0, BUFFER_MAPPER_SIZE );
+
+	err = nla_parse( tb, FW_ATTR_MAX, genlmsg_attrdata( genlhdr, 0 ),
+			         genlmsg_attrlen( genlhdr, 0 ), NULL );
+
+	if ( err )
+    {
+		printf("unable to parse message: %s\n", nl_geterror(err));
+		return NL_SKIP;
+	}
+
+	if ( !tb[FW_ATTR_REPLY] )
+    {
+		printf("msg attribute missing from message\n");
+		return NL_SKIP;
+	}
+
+    id  = nla_get_u32( tb[FW_ATTR_REPLY] );
+    err = reply_to_str( id, buffer );
+    if ( err < 0 )
+    {
+        printf( "failed to to map id to string\n" );
+		return NL_SKIP;
+    }
+
+	printf("message received: %s\n", buffer );
+
+	return NL_OK;
+}
+
 int netlink_socket_init( struct nl_sock **socket )
 {
     int family_id;
@@ -21,6 +123,19 @@ int netlink_socket_init( struct nl_sock **socket )
     }
 
     return family_id;
+}
+
+int netlink_socket_init_cb( struct nl_sock **socket )
+{
+    int err;
+
+    err = nl_socket_modify_cb( *socket, NL_CB_VALID, NL_CB_CUSTOM, netlink_socket_reply_procces, NULL );
+    if ( err < 0 )
+    {
+        nl_cli_fatal(err, "Unable to modify valid message callback");
+    }
+
+    return 0;
 }
 
 int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void **hdr,
@@ -60,12 +175,12 @@ int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void 
     return 0;
 }
 
-int netlink_socket_send_msg( struct nl_sock **sock, struct nl_msg **msg )
+int netlink_socket_send_msg( struct nl_sock **socket, struct nl_msg **msg )
 {
-    if ( *sock && *msg )
+    if ( *socket && *msg )
     {
         int err;
-        err = nl_send_auto( *sock, *msg );
+        err = nl_send_auto( *socket, *msg );
         if ( err < 0)
         {
             nl_cli_fatal( err, "Failed to send message [%s]", nl_geterror( err ) );
@@ -79,13 +194,26 @@ int netlink_socket_send_msg( struct nl_sock **sock, struct nl_msg **msg )
     return 0;
 }
 
-int netlink_socket_free( struct nl_sock **sock, struct nl_msg **msg )
+int netlink_socket_recv_msg( struct nl_sock **socket )
 {
-    if ( *sock && *msg )
+    int err;
+
+    err = nl_recvmsgs_default( *socket );
+    if ( err < 0 )
+    {
+        nl_cli_fatal(err, "%s", nl_geterror(err));
+    }
+
+    return 0;
+}
+
+int netlink_socket_free( struct nl_sock **socket, struct nl_msg **msg )
+{
+    if ( *socket && *msg )
     {
         nlmsg_free( *msg );
-        nl_close( *sock );
-        nl_socket_free( *sock );
+        nl_close( *socket );
+        nl_socket_free( *socket );
     }
     else
     {
