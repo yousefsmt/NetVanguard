@@ -4,12 +4,29 @@
 #define FW_NETLINK_NAME    "NETVANGUARD"
 #define FW_NETLINK_VERSION ( 1 )
 
+enum van_reply_ip_t
+{
+    FW_REP_SRC_BLOCK_IP,
+    FW_REP_DEST_BLOCK_IP,
+    FW_REP_SRC_ACCEPT_IP,
+    FW_REP_DEST_ACCEPT_IP,
+    FW_REP_SRC_BLOCK_PORT,
+    FW_REP_DEST_BLOCK_PORT,
+    FW_REP_SRC_ACCEPT_PORT,
+    FW_REP_DEST_ACCEPT_PORT,
+    FW_REP_ICMP,
+    __FW_REP_MAX
+};
+
+#define FW_REP_MAX (__FW_REP_MAX - 1)
+
 enum van_cmd_t
 {
     FW_CMD_UNSPEC,
     FW_CMD_ACCEPT_IP,
     FW_CMD_BLOCK_IP,
     FW_CMD_REJECT_IP,
+    FW_CMD_REPLY,
     __FW_CMD_MAX
 };
 
@@ -21,6 +38,7 @@ enum van_attr_t
     FW_ATTR_SRC_IP,
     FW_ATTR_PORT,
     FW_ATTR_DEST_IP,
+    FW_ATTR_REPLY,
     __FW_ATTR_MAX
 };
 
