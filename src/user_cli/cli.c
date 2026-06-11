@@ -41,9 +41,7 @@ int main( int argc, char *argv[] )
         return -1;
     }
 
-    err = netlink_socket_pack_msg( &van_cli.socket, &van_cli.msg, &van_cli.hdr, /* file descriptor, message, headder*/
-                                   family_id, FW_ATTR_SRC_IP, /* family id, attribute send message */
-                                   FW_CMD_ACCEPT_IP, van_cli.ip ); /* which command must be send, ip for this rule */
+    err = netlink_socket_pack_msg( &van_cli.socket, &van_cli.msg, &van_cli.hdr, &van_cli.rules, family_id, FW_CMD_REQUEST );
     if ( err < 0 )
     {
         ERROR( "During packing message error occur!!\n");
@@ -224,20 +222,19 @@ static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
             case 't':
             {
                 size_t idx = (strncmp(argv[optind-0x01], "-t", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
-                van_cli->mode = get_mode( rule, argv[idx] );
+                van_cli->rules.flags = get_mode( rule, argv[idx] );
                 break;
             }
             case 'i':
             {
                 size_t idx = (strncmp(argv[optind-0x01], "-i", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
-                van_cli->ip = inet_addr( argv[idx] );
+                van_cli->rules.ip = inet_addr( argv[idx] );
                 break;
             }
             case 'p':
             {
                 size_t idx = (strncmp(argv[optind-0x01], "-p", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
-                uint16_t port = strtol( argv[idx], NULL, 10 );
-                van_cli->port = htons( port );
+                van_cli->rules.port = strtol( argv[idx], NULL, 10 ); 
                 break;
             }
             case '?':

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <netlink/netlink.h>
+#include "kernel.h"
 
 enum van_log_t
 {
@@ -47,12 +48,10 @@ enum van_mode_t
 
 struct van_cli_t
 {
-    struct nl_sock *socket;
-    struct nl_msg  *msg;
-    void *hdr;
-    uint32_t mode;
-    uint32_t ip;
-    uint16_t port;
+    struct van_str_rule_t rules;
+    struct nl_sock       *socket;
+    struct nl_msg        *msg;
+    void                 *hdr;
 };
 
 typedef void (*help_t)( const char* );

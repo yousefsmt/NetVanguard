@@ -5,6 +5,7 @@
 
 int main(int argc, char *argv[])
 {
+    struct van_str_rule_t rules;
     struct nl_sock *socket = NULL;
     struct nl_msg  *msg    = NULL;
 
@@ -26,6 +27,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    rules.ip    = ip_to_block;
+    rules.port  = htons( 2020 );
+    rules.flags = 12;
+
     family_id = netlink_socket_init( &socket );
 
     err = netlink_socket_init_cb( &socket );
@@ -35,9 +40,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    err = netlink_socket_pack_msg( &socket, &msg, &hdr, /* file descriptor, message, headder*/
-                                   family_id, FW_ATTR_SRC_IP, /* family id, attribute send message */
-                                   FW_CMD_ACCEPT_IP, ip_to_block ); /* which command must be send, ip for this rule */
+    err = netlink_socket_pack_msg( &socket, &msg, &hdr, &rules, family_id, FW_CMD_REQUEST );
     if ( err < 0 )
     {
         ERROR( "During packing message error occur!!\n");

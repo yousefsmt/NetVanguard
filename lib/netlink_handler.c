@@ -88,13 +88,13 @@ static int netlink_socket_reply_procces( struct nl_msg *msg, void *arg )
 		return NL_SKIP;
 	}
 
-	if ( !tb[FW_ATTR_REPLY] )
+	if ( !tb[FW_ATTR_ACK] )
     {
 		printf("msg attribute missing from message\n");
 		return NL_SKIP;
 	}
 
-    id  = nla_get_u32( tb[FW_ATTR_REPLY] );
+    id  = nla_get_u32( tb[FW_ATTR_ACK] );
     err = reply_to_str( id, buffer );
     if ( err < 0 )
     {
@@ -141,7 +141,7 @@ int netlink_socket_init_cb( struct nl_sock **socket )
 }
 
 int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void **hdr,
-                               int family_id, int attrtype, int cmd, uint32_t ip_address )
+                             struct van_str_rule_t *rules, int family_id, int cmd )                     
 {
     int err;
 
@@ -166,12 +166,28 @@ int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void 
         nl_cli_fatal( ENOMEM, "Failed to add header to message [%s]", nl_geterror( ENOMEM ) );
     }
 
-    err = nla_put_u32( *msg, attrtype, ip_address );
+    err = nla_put_u32( *msg, FW_ATTR_IP, rules->ip );
     if ( err < 0 )
     {
         nl_close( *socket );
         nl_socket_free( *socket );
-        nl_cli_fatal( err, "Failed to add data to message [%s]", nl_geterror( err ) );
+        nl_cli_fatal( err, "Failed to add ip to message [%s]", nl_geterror( err ) );
+    }
+
+    err = nla_put_u16( *msg, FW_ATTR_PORT, rules->port );
+    if ( err < 0 )
+    {
+        nl_close( *socket );
+        nl_socket_free( *socket );
+        nl_cli_fatal( err, "Failed to add port to message [%s]", nl_geterror( err ) );
+    }
+
+    err = nla_put_u8( *msg, FW_ATTR_FLAG, rules->flags );
+    if ( err < 0 )
+    {
+        nl_close( *socket );
+        nl_socket_free( *socket );
+        nl_cli_fatal( err, "Failed to add length to message [%s]", nl_geterror( err ) );
     }
 
     return 0;

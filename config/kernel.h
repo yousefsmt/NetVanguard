@@ -3,6 +3,16 @@
 
 #define FW_NETLINK_NAME    "NETVANGUARD"
 #define FW_NETLINK_VERSION ( 1 )
+#define FW_GEN_PRE_ALLOC ( ( size_t )10 )
+
+struct __attribute__((__packed__)) van_str_rule_t
+{
+    uint32_t ip;
+    uint16_t port;
+    uint8_t  flags;
+};
+
+#define NL_PACKET_SIZE ( sizeof( struct van_str_rule_t ) )
 
 enum van_reply_ip_t
 {
@@ -23,10 +33,8 @@ enum van_reply_ip_t
 enum van_cmd_t
 {
     FW_CMD_UNSPEC,
-    FW_CMD_ACCEPT_IP,
-    FW_CMD_BLOCK_IP,
-    FW_CMD_REJECT_IP,
-    FW_CMD_REPLY,
+    FW_CMD_REQUEST,
+    FW_CMD_RESPONSE,
     __FW_CMD_MAX
 };
 
@@ -35,10 +43,10 @@ enum van_cmd_t
 enum van_attr_t
 {
     FW_ATTR_UNSPEC,
-    FW_ATTR_SRC_IP,
+    FW_ATTR_IP,
     FW_ATTR_PORT,
-    FW_ATTR_DEST_IP,
-    FW_ATTR_REPLY,
+    FW_ATTR_FLAG,
+    FW_ATTR_ACK,
     __FW_ATTR_MAX
 };
 

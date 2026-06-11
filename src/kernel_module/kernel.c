@@ -3,140 +3,136 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/ip.h>
+#include <net/tcp.h>
 #include <net/genetlink.h>
+#include <linux/generic-radix-tree.h>
+
 #include "kernel.h"
 
-
-static __be32 accept_ip;
-static __be32 blocked_ip;
-static __be32 reject_ip;
-static u16 port;
+static unsigned long idx;
+static GENRADIX(struct van_str_rule_t) rule_genradix;
 
 static int pack_reply_message( struct genl_info **info, u32 status );
 
-static int van_accept_hook( struct sk_buff *skb, struct genl_info *info )
+static int van_data_hook( struct sk_buff *skb, struct genl_info *info )
 {
-    __be32 new_ip;
-
-    if ( !info->attrs[FW_ATTR_SRC_IP] )
+    if ( !info->attrs[FW_ATTR_IP] )
     {
         printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
         return -EINVAL;
     }
-    
-    new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
-    WRITE_ONCE( accept_ip, new_ip );
 
-    if ( pack_reply_message( &info, FW_REP_SRC_ACCEPT_IP ) < 0 )
+    if ( !info->attrs[FW_ATTR_PORT] )
     {
-        printk(KERN_ERR "NetVanguard: Reply failed\n");
+        printk(KERN_ERR "NetVanguard: Missing port attribute\n");
         return -EINVAL;
     }
 
-    printk( KERN_INFO "NetVanguard: Rule updated. Now acceptable: %pI4\n", &accept_ip );
-
-    return 0;
-}
-
-static int van_block_hook( struct sk_buff *skb, struct genl_info *info )
-{
-    __be32 new_ip;
-    u16 new_port;
-
-    // if ( !info->attrs[FW_ATTR_SRC_IP] )
-    // {
-    //     printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
-    //     return -EINVAL;
-    // }
-
-    if ( info->attrs[FW_ATTR_SRC_IP] )
+    if ( !info->attrs[FW_ATTR_FLAG] )
     {
-        new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
-        WRITE_ONCE( blocked_ip, new_ip );
-
-        printk( KERN_INFO "NetVanguard: Receive source: %pI4\n", &blocked_ip );
+        printk(KERN_ERR "NetVanguard: Missing port attribute\n");
+        return -EINVAL;
     }
-    else if ( info->attrs[FW_ATTR_PORT] )
-    {
-        new_port = nla_get_u16( info->attrs[FW_ATTR_PORT] );
-        WRITE_ONCE( port, new_port );
 
-        printk( KERN_INFO "NetVanguard: Receive port: %d\n", port );
+    if ( idx >= FW_GEN_PRE_ALLOC )
+    {
+        printk(KERN_INFO "NetVanguard: The radix tree database is full; this rule overwrites at zero index\n");
+        WRITE_ONCE( idx, 0 );
     }
-    else if ( info->attrs[FW_ATTR_DEST_IP] )
-    {
-        new_ip = nla_get_u32( info->attrs[FW_ATTR_DEST_IP] );
-        WRITE_ONCE( blocked_ip, new_ip );
 
-        printk( KERN_INFO "NetVanguard: Receive destination: %pI4\n", &blocked_ip );
+    struct van_str_rule_t *db = genradix_ptr( &rule_genradix, idx );
+    if ( db )
+    {
+        db->ip    = nla_get_u32( info->attrs[FW_ATTR_IP] );
+        db->port  = nla_get_u16( info->attrs[FW_ATTR_PORT] );
+        db->flags = nla_get_u8( info->attrs[FW_ATTR_FLAG] );
+
+        printk(KERN_INFO "NetVanguard: ********** Success Store **********\n" );
+        printk(KERN_INFO "NetVanguard: IP: %pI4\n", &db->ip );
+        printk(KERN_INFO "NetVanguard: PORT: %d\n", db->port );
+        printk(KERN_INFO "NetVanguard: FLAGS: %d\n", db->flags );
+
+        if ( pack_reply_message( &info, FW_REP_ICMP ) < 0 )
+        {
+            printk(KERN_ERR "NetVanguard: Reply failed\n");
+            return -EINVAL;
+        }
+
+        WRITE_ONCE( idx, idx+1 );
     }
     else
     {
-        printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
-        return -EINVAL;
-    }
+        printk(KERN_ERR "NetVanguard: The radix tree database idx[%ld] does not exist\n", idx );
+        return -ENOMEM;
 
-    if ( pack_reply_message( &info, FW_REP_SRC_BLOCK_IP ) < 0 )
-    {
-        printk(KERN_ERR "NetVanguard: Reply failed\n");
-        return -EINVAL;
     }
-
-    printk( KERN_INFO "NetVanguard: Rule updated. Now blocking: %pI4\n", &blocked_ip );
 
     return 0;
 }
 
-static int van_reject_hook( struct sk_buff *skb, struct genl_info *info )
-{
-    __be32 new_ip;
+// static int van_block_hook( struct sk_buff *skb, struct genl_info *info )
+// {
+//     __be32 new_ip;
+//     u16 new_port;
 
-    if ( !info->attrs[FW_ATTR_SRC_IP] )
-    {
-        printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
-        return -EINVAL;
-    }
+//     // if ( !info->attrs[FW_ATTR_IP] )
+//     // {
+//     //     printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
+//     //     return -EINVAL;
+//     // }
 
-    new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
-    WRITE_ONCE( reject_ip, new_ip );
+//     if ( info->attrs[FW_ATTR_IP] )
+//     {
+//         new_ip = nla_get_u32( info->attrs[FW_ATTR_IP] );
+//         WRITE_ONCE( blocked_ip, new_ip );
 
-    if ( pack_reply_message( &info, FW_REP_ICMP ) < 0 )
-    {
-        printk(KERN_ERR "NetVanguard: Reply failed\n");
-        return -EINVAL;
-    }
+//         printk( KERN_INFO "NetVanguard: Receive source: %pI4\n", &blocked_ip );
+//     }
+//     else if ( info->attrs[FW_ATTR_DATA] )
+//     {
+//         new_port = nla_get_u16( info->attrs[FW_ATTR_DATA] );
+//         WRITE_ONCE( port, new_port );
 
-    printk( KERN_INFO "NetVanguard: Rule updated. Now rejection: %pI4\n", &reject_ip );
+//         printk( KERN_INFO "NetVanguard: Receive port: %d\n", port );
+//     }
+//     else if ( info->attrs[FW_ATTR_DEST_IP] )
+//     {
+//         new_ip = nla_get_u32( info->attrs[FW_ATTR_DEST_IP] );
+//         WRITE_ONCE( blocked_ip, new_ip );
 
-    return 0;
-}
+//         printk( KERN_INFO "NetVanguard: Receive destination: %pI4\n", &blocked_ip );
+//     }
+//     else
+//     {
+//         printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
+//         return -EINVAL;
+//     }
+
+//     if ( pack_reply_message( &info, FW_REP_SRC_BLOCK_IP ) < 0 )
+//     {
+//         printk(KERN_ERR "NetVanguard: Reply failed\n");
+//         return -EINVAL;
+//     }
+
+//     printk( KERN_INFO "NetVanguard: Rule updated. Now blocking: %pI4\n", &blocked_ip );
+
+//     return 0;
+// }
 
 static const struct nla_policy van_attr_policy[FW_ATTR_MAX + 1] =
 {
-    [FW_ATTR_SRC_IP]  = { .type = NLA_U32 },
-    [FW_ATTR_PORT]    = { .type = NLA_U16 },
-    [FW_ATTR_DEST_IP] = { .type = NLA_U32 },
-    [FW_ATTR_REPLY]   = { .type = NLA_U32 }
+    [FW_ATTR_IP]   = { .type = NLA_U32 },
+    [FW_ATTR_PORT] = { .type = NLA_U16 },
+    [FW_ATTR_FLAG] = { .type = NLA_U8 },
+    [FW_ATTR_ACK]  = { .type = NLA_U32 }
 };
 
 static const struct genl_ops van_ops[] = 
 {
     {
-        .doit   = van_accept_hook,
+        .doit   = van_data_hook,
         .policy = van_attr_policy,
-        .cmd    = FW_CMD_ACCEPT_IP,
-        .flags  = 0
-    },
-    {
-        .doit   = van_block_hook,
-        .policy = van_attr_policy,
-        .cmd    = FW_CMD_BLOCK_IP,
-        .flags  = 0
-    },
-    {
-        .doit   = van_reject_hook,
-        .policy = van_attr_policy,
-        .cmd    = FW_CMD_REJECT_IP,
+        .cmd    = FW_CMD_REQUEST,
         .flags  = 0
     }
 };
@@ -164,7 +160,7 @@ static int pack_reply_message( struct genl_info **info, u32 status )
         return -ENOMEM;
     }
 
-    hdr = genlmsg_put_reply( skb, *info, &van_family, 0, FW_CMD_REPLY );
+    hdr = genlmsg_put_reply( skb, *info, &van_family, 0, FW_CMD_RESPONSE );
     if ( hdr == NULL )
     {
         nlmsg_free( skb );
@@ -172,7 +168,7 @@ static int pack_reply_message( struct genl_info **info, u32 status )
         return -ENOMEM;
     }
 
-    if ( nla_put_u32( skb, FW_ATTR_REPLY, status ) )
+    if ( nla_put_u32( skb, FW_ATTR_ACK, status ) )
     {
         genlmsg_cancel( skb, hdr );
         nlmsg_free( skb );
@@ -189,7 +185,44 @@ static int pack_reply_message( struct genl_info **info, u32 status )
     return ret;
 }
 
-// static unsigned int fw_hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+// static unsigned int ntf_post_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+// {
+//     struct iphdr *iph;
+
+//     if (!skb) return NF_ACCEPT;
+
+//     iph = ip_hdr(skb);
+//     if (!iph) return NF_ACCEPT;
+
+//     if ( iph->protocol == IPPROTO_TCP )
+//     {
+//         /* port extraction */
+//         struct tcphdr *tcph = tcp_hdr(skb);
+//         if ( !tcph ) return NF_ACCEPT;
+//         if ( tcph->source == port )
+//         {
+//             /* TODO: must block port*/
+//         }
+//     }
+
+//     // If the packet's source IP matches our blocked IP, drop it!
+//     if (blocked_ip != 0 && iph->saddr == blocked_ip) {
+//         printk_ratelimited(KERN_INFO "FW_BLOCKER: Dropping packet from %pI4\n", &iph->saddr);
+//         return NF_DROP;
+//     }
+
+//     return NF_ACCEPT;
+// }
+
+// static struct nf_hook_ops ntf_post_ops =
+// {
+//     .hook     = ntf_post_hook,
+//     .pf       = NFPROTO_IPV4,
+//     .hooknum  = NF_INET_POST_ROUTING,
+//     .priority = NF_IP_PRI_FIRST,
+// };
+
+// static unsigned int ntf_pre_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 // {
 //     struct iphdr *iph;
 
@@ -207,35 +240,23 @@ static int pack_reply_message( struct genl_info **info, u32 status )
 //     return NF_ACCEPT;
 // }
 
-// static struct nf_hook_ops fw_nf_ops = {
-//     .hook     = fw_hook_func,
+// static struct nf_hook_ops ntf_pre_ops =
+// {
+//     .hook     = ntf_pre_hook,
 //     .pf       = NFPROTO_IPV4,
 //     .hooknum  = NF_INET_PRE_ROUTING,
 //     .priority = NF_IP_PRI_FIRST,
 // };
 
-// static int fw_nl_block_ip_cb(struct sk_buff *skb, struct genl_info *info)
-// {
-//     __be32 new_ip;
-
-//     if (!info->attrs[FW_ATTR_SRC_IP]) {
-//         printk(KERN_ERR "FW_BLOCKER: Missing IP attribute\n");
-//         return -EINVAL;
-//     }
-
-//     // Extract the Value from the TLV
-//     new_ip = nla_get_u32(info->attrs[FW_ATTR_SRC_IP]);
-    
-//     // Update our global firewall rule safely
-//     WRITE_ONCE(blocked_ip, new_ip);
-    
-//     printk(KERN_INFO "FW_BLOCKER: Rule updated. Now blocking: %pI4\n", &blocked_ip);
-//     return 0;
-// }
-
 static int __init netvanguard_init( void )
 {
     int ret;
+    
+    genradix_init( &rule_genradix );
+
+    genradix_prealloc( &rule_genradix, FW_GEN_PRE_ALLOC, GFP_KERNEL );
+
+    WRITE_ONCE( idx, 0 );
 
     ret = genl_register_family( &van_family );
     if ( ret < 0 )
@@ -244,13 +265,23 @@ static int __init netvanguard_init( void )
         return ret;
     }
 
-    // ret = nf_register_net_hook( &init_net, &fw_nf_ops );
-    // if ( ret < 0 )
-    // {
-    //     genl_unregister_family( &van_family );
-    //     printk( KERN_ERR "NetVanguard: Failed to register Netfilter hook\n" );
-    //     return ret;
-    // }
+    /*
+    ret = nf_register_net_hook( &init_net, &ntf_pre_ops );
+    if ( ret < 0 )
+    {
+        genl_unregister_family( &van_family );
+        printk( KERN_ERR "NetVanguard: Failed to register Netfilter pre-routing hook\n" );
+        return ret;
+    }
+
+    ret = nf_register_net_hook( &init_net, &ntf_post_ops );
+    if ( ret < 0 )
+    {
+        genl_unregister_family( &van_family );
+        printk( KERN_ERR "NetVanguard: Failed to register Netfilter post-routing hook\n" );
+        return ret;
+    }
+    */
 
     printk(KERN_INFO "NetVanguard: Module loaded successfully.\n");
     return 0;
@@ -260,13 +291,19 @@ static void __exit netvanguard_exit( void )
 {
     int ret;
 
-    // nf_unregister_net_hook(&init_net, &fw_nf_ops);
+    genradix_free( &rule_genradix );
+
+    /*
+    nf_unregister_net_hook(&init_net, &ntf_pre_ops);
+    nf_unregister_net_hook(&init_net, &ntf_post_ops);
+    */
 
     ret = genl_unregister_family(&van_family);
     if ( ret < 0 )
     {
         printk( KERN_ERR "NetVanguard: Failed to register Netlink family error id[%d]\n", ret );
     }
+
     printk(KERN_INFO "NetVanguard: Module unloaded.\n");
 }
 

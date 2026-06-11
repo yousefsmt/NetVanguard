@@ -10,8 +10,7 @@ int netlink_socket_init( struct nl_sock **socket );
 
 int netlink_socket_init_cb( struct nl_sock **socket );
 
-int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void **hdr,
-                             int family_id, int attrtype, int cmd, uint32_t ip_address );
+int netlink_socket_pack_msg( struct nl_sock **socket, struct nl_msg **msg, void **hdr, struct van_str_rule_t *rules, int family_id, int cmd );
 
 int netlink_socket_send_msg( struct nl_sock **socket, struct nl_msg **msg );
 
