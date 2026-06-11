@@ -1,4 +1,5 @@
 #!/bin/bash
+set -Eeuo pipefail
 
 rm -rf build
 autoreconf -fi

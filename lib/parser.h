@@ -4,12 +4,13 @@
 #include <signal.h>
 #include "types.h"
 
-#define DEBUG( msg... )   debug_msg(DEBUG, msg )
-#define SUCCESS( msg... ) debug_msg(SUCCESS, msg )
-#define WARNING( msg... ) debug_msg(WARNING, msg )
-#define ERROR( msg... )   debug_msg(ERROR, msg )
+#define DEBUG( msg... )   debug_msg( DEBUG, msg )
+#define SUCCESS( msg... ) debug_msg( SUCCESS, msg )
+#define WARNING( msg... ) debug_msg( WARNING, msg )
+#define ERROR( msg... )   debug_msg( ERROR, msg )
 
-int  handler_options( int argc, char *argv[] );
+int handler_options( void *config, int argc, char *argv[],
+                     help_t cb, parser_t parser, int type );
 void handler_signal( int signal );
 
 void debug_msg( enum van_log_t level, const char * fmt, ...);

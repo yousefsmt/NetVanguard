@@ -24,8 +24,8 @@ netvanguardd_LDADD = libClp.la $(LIBNL3_LIBS)
 netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 netvanguard_cli_SOURCES = src/user_cli/cli.c
-netvanguard_cli_LDADD = libClp.la
-netvanguard_cli_CFLAGS = $(AM_CFLAGS)
+netvanguard_cli_LDADD = libClp.la $(LIBNL3_LIBS)
+netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 check_PROGRAMS = \
 				tests/tcp_simple_connection/tcp_test \

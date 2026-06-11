@@ -35,10 +35,38 @@ void handler_signal(int sig)
     _exit(sig);
 }
 
-int handler_options( int argc, char *argv[] )
+int handler_options( void *config, int argc, char *argv[],
+                     help_t cb, parser_t parser, int type )
 {
+    ( void )config;
     ( void )argc;
     ( void )argv;
+    ( void )parser;
+
+    cb( "Hello" );
+
+    switch ( type )
+    {
+    case VANGUARD_TEST_TCP:
+    {
+
+    }
+    case VANGUARD_TEST_NL:
+    {
+
+    }
+    case VANGUARD_CLI:
+    {
+
+    }
+    case VANGUARD_DAEMON:
+    {
+
+    }
+    default:
+        ERROR( "type argumnet in handle options invalid" );
+        return -1;
+    }
 
     return 0;
 }
