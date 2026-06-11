@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}",
                 "${workspaceFolder}/lib",
-                "${workspaceFolder}/include/kernel_module",
+                "${workspaceFolder}/config",
                 "/usr/src/linux-headers-6.12.90+deb13.1-common/include",
                 "/usr/src/linux-headers-6.12.90+deb13.1-common/include/uapi",
                 "/usr/src/linux-headers-6.12.90+deb13.1-common/arch/x86/include",
