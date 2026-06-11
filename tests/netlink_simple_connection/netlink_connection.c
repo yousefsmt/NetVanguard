@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "netlink_handler.h"
+#include "parser.h"
 
 int main(int argc, char *argv[])
 {
@@ -15,13 +16,13 @@ int main(int argc, char *argv[])
     uint32_t ip_to_block = 0 ;
 
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <IP_ADDRESS>\n", argv[0]);
+        ERROR( "Usage: %s <IP_ADDRESS>\n", argv[0]);
         return -1;
     }
 
     ip_to_block = inet_addr(argv[1]);
     if (ip_to_block == INADDR_NONE) {
-        fprintf(stderr, "Invalid IP address format.\n");
+        ERROR( "Invalid IP address format.\n");
         return -1;
     }
 
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
     err = netlink_socket_init_cb( &socket );
     if ( err < 0 )
     {
-        fprintf(stderr, "Adding callback error occur!!\n");
+        ERROR( "Adding callback error occur!!\n");
         return -1;
     }
 
@@ -39,28 +40,28 @@ int main(int argc, char *argv[])
                                    FW_CMD_ACCEPT_IP, ip_to_block ); /* which command must be send, ip for this rule */
     if ( err < 0 )
     {
-        fprintf(stderr, "During packing message error occur!!\n");
+        ERROR( "During packing message error occur!!\n");
         return -1;
     }
 
     err = netlink_socket_send_msg( &socket, &msg );
     if ( err < 0 )
     {
-        fprintf(stderr, "During sending message error occur!!\n");
+        ERROR( "During sending message error occur!!\n");
         return -1;
     }
 
     err = netlink_socket_recv_msg( &socket );
     if ( err < 0 )
     {
-        fprintf(stderr, "During receiving message error occur!!\n");
+        ERROR( "During receiving message error occur!!\n");
         return -1;
     }
 
     err = netlink_socket_free( &socket, &msg );
     if ( err < 0 )
     {
-        fprintf(stderr, "During deallocation resource error occur!!\n");
+        ERROR( "During deallocation resource error occur!!\n");
         return -1;
     }
 

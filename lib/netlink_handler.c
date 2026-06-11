@@ -3,6 +3,7 @@
 #include <netlink/cli/utils.h>
 
 #include "netlink_handler.h"
+#include "parser.h"
 
 static int reply_to_str( uint32_t id, char *buffer )
 {
@@ -119,6 +120,7 @@ int netlink_socket_init( struct nl_sock **socket )
     {
         nl_close( *socket );
         nl_socket_free( *socket );
+        ERROR( "Socket cannot resolve with netvanguard kernel module, please check with \"lsmod | grep netvanguard\" " );
         nl_cli_fatal( family_id, "Failed to resolve generic netlink family! [%s]", nl_geterror( family_id ) );
     }
 

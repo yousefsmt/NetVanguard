@@ -10,6 +10,7 @@
 static __be32 accept_ip;
 static __be32 blocked_ip;
 static __be32 reject_ip;
+static u16 port;
 
 static int pack_reply_message( struct genl_info **info, u32 status );
 
@@ -40,15 +41,40 @@ static int van_accept_hook( struct sk_buff *skb, struct genl_info *info )
 static int van_block_hook( struct sk_buff *skb, struct genl_info *info )
 {
     __be32 new_ip;
+    u16 new_port;
 
-    if ( !info->attrs[FW_ATTR_SRC_IP] )
+    // if ( !info->attrs[FW_ATTR_SRC_IP] )
+    // {
+    //     printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
+    //     return -EINVAL;
+    // }
+
+    if ( info->attrs[FW_ATTR_SRC_IP] )
+    {
+        new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
+        WRITE_ONCE( blocked_ip, new_ip );
+
+        printk( KERN_INFO "NetVanguard: Receive source: %pI4\n", &blocked_ip );
+    }
+    else if ( info->attrs[FW_ATTR_PORT] )
+    {
+        new_port = nla_get_u16( info->attrs[FW_ATTR_PORT] );
+        WRITE_ONCE( port, new_port );
+
+        printk( KERN_INFO "NetVanguard: Receive port: %d\n", port );
+    }
+    else if ( info->attrs[FW_ATTR_DEST_IP] )
+    {
+        new_ip = nla_get_u32( info->attrs[FW_ATTR_DEST_IP] );
+        WRITE_ONCE( blocked_ip, new_ip );
+
+        printk( KERN_INFO "NetVanguard: Receive destination: %pI4\n", &blocked_ip );
+    }
+    else
     {
         printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
         return -EINVAL;
     }
-    
-    new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
-    WRITE_ONCE( blocked_ip, new_ip );
 
     if ( pack_reply_message( &info, FW_REP_SRC_BLOCK_IP ) < 0 )
     {
@@ -70,7 +96,7 @@ static int van_reject_hook( struct sk_buff *skb, struct genl_info *info )
         printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
         return -EINVAL;
     }
-    
+
     new_ip = nla_get_u32( info->attrs[FW_ATTR_SRC_IP] );
     WRITE_ONCE( reject_ip, new_ip );
 

@@ -2,7 +2,7 @@
 #define NETVANGUARD_LIB_NETLINK_HANDLER_H_
 
 #include <netlink/netlink.h>
-#include "include/kernel_module/kernel.h"
+#include "kernel.h"
 
 #define BUFFER_MAPPER_SIZE ( ( size_t )25 )
 

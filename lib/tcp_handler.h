@@ -7,8 +7,7 @@
 enum socket_type_t
 {
     SERVER_SIDE,
-    CLIENT_SIDE,
-    ERROR
+    CLIENT_SIDE
 };
 
 struct server_side

@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_srcdir)/config
 AM_CFLAGS = -Wall -Werror -Wextra
 
 lib_LTLIBRARIES = libClp.la
@@ -24,8 +24,8 @@ netvanguardd_LDADD = libClp.la $(LIBNL3_LIBS)
 netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 netvanguard_cli_SOURCES = src/user_cli/cli.c
-netvanguard_cli_LDADD = libClp.la
-netvanguard_cli_CFLAGS = $(AM_CFLAGS)
+netvanguard_cli_LDADD = libClp.la $(LIBNL3_LIBS)
+netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 check_PROGRAMS = \
 				tests/tcp_simple_connection/tcp_test \
@@ -52,7 +52,7 @@ all-local:
 	@mkdir -p $(abs_builddir)/src/kernel_module
 	@cp -p $(abs_srcdir)/Kbuild $(abs_builddir)/Kbuild
 	@cp -p $(abs_srcdir)/src/kernel_module/kernel.c $(abs_builddir)/src/kernel_module/kernel.c
-	$(MAKE) -C $(KDIR) M=$(abs_builddir) CFLAGS_MODULE="-I$(abs_srcdir)/include/kernel_module" modules
+	$(MAKE) -C $(KDIR) M=$(abs_builddir) CFLAGS_MODULE="-I$(abs_srcdir)/config" modules
 
 install-exec-local:
 	$(MAKE) -C $(KDIR) M=$(abs_builddir) modules_install
