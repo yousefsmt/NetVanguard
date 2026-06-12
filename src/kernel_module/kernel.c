@@ -11,6 +11,7 @@
 
 static unsigned long idx;
 static GENRADIX(struct van_str_rule_t) rule_genradix;
+static struct genradix_iter *iter;
 
 static int pack_reply_message( struct genl_info **info, u32 status );
 
@@ -47,10 +48,8 @@ static int van_data_hook( struct sk_buff *skb, struct genl_info *info )
         db->port  = nla_get_u16( info->attrs[FW_ATTR_PORT] );
         db->flags = nla_get_u8( info->attrs[FW_ATTR_FLAG] );
 
-        printk(KERN_INFO "NetVanguard: ********** Success Store **********\n" );
-        printk(KERN_INFO "NetVanguard: IP: %pI4\n", &db->ip );
-        printk(KERN_INFO "NetVanguard: PORT: %d\n", db->port );
-        printk(KERN_INFO "NetVanguard: FLAGS: %d\n", db->flags );
+        printk(KERN_INFO "NetVanguard: receive rule packet\n" );
+        printk(KERN_INFO "NetVanguard: # %ld IP: %pI4 | PORT: %d | FLAGS: %d\n", idx, &db->ip, db->port, db->flags );
 
         if ( pack_reply_message( &info, FW_REP_ICMP ) < 0 )
         {
@@ -69,55 +68,6 @@ static int van_data_hook( struct sk_buff *skb, struct genl_info *info )
 
     return 0;
 }
-
-// static int van_block_hook( struct sk_buff *skb, struct genl_info *info )
-// {
-//     __be32 new_ip;
-//     u16 new_port;
-
-//     // if ( !info->attrs[FW_ATTR_IP] )
-//     // {
-//     //     printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
-//     //     return -EINVAL;
-//     // }
-
-//     if ( info->attrs[FW_ATTR_IP] )
-//     {
-//         new_ip = nla_get_u32( info->attrs[FW_ATTR_IP] );
-//         WRITE_ONCE( blocked_ip, new_ip );
-
-//         printk( KERN_INFO "NetVanguard: Receive source: %pI4\n", &blocked_ip );
-//     }
-//     else if ( info->attrs[FW_ATTR_DATA] )
-//     {
-//         new_port = nla_get_u16( info->attrs[FW_ATTR_DATA] );
-//         WRITE_ONCE( port, new_port );
-
-//         printk( KERN_INFO "NetVanguard: Receive port: %d\n", port );
-//     }
-//     else if ( info->attrs[FW_ATTR_DEST_IP] )
-//     {
-//         new_ip = nla_get_u32( info->attrs[FW_ATTR_DEST_IP] );
-//         WRITE_ONCE( blocked_ip, new_ip );
-
-//         printk( KERN_INFO "NetVanguard: Receive destination: %pI4\n", &blocked_ip );
-//     }
-//     else
-//     {
-//         printk(KERN_ERR "NetVanguard: Missing IP attribute\n");
-//         return -EINVAL;
-//     }
-
-//     if ( pack_reply_message( &info, FW_REP_SRC_BLOCK_IP ) < 0 )
-//     {
-//         printk(KERN_ERR "NetVanguard: Reply failed\n");
-//         return -EINVAL;
-//     }
-
-//     printk( KERN_INFO "NetVanguard: Rule updated. Now blocking: %pI4\n", &blocked_ip );
-
-//     return 0;
-// }
 
 static const struct nla_policy van_attr_policy[FW_ATTR_MAX + 1] =
 {

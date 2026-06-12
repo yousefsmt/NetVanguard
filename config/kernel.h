@@ -5,6 +5,45 @@
 #define FW_NETLINK_VERSION ( 1 )
 #define FW_GEN_PRE_ALLOC ( ( size_t )10 )
 
+#define SET_SIDE( x )       ( ( x << 4 ) & 0x30 )
+#define SET_HOOK_TYPE( x )  ( ( x << 2 ) & 0x0c )
+#define SET_RULE_TYPE( x )  ( x  & 0x03 )
+
+#define GET_SIDE( x )      ( ( x & 0x30 ) >> 4 )  
+#define GET_HOOK_TYPE( x ) ( ( x & 0x0c ) >> 2 )
+#define GET_RULE_TYPE( x ) ( x & 0x03 )
+
+enum van_side_t
+{
+    __UNSPEC_SIDE,
+    INPUT,
+    OUTPUT,
+    __SIDE_MAX
+};
+
+#define SIDE_MAX ( __SIDE_MAX - 1 )
+
+enum van_hook_t
+{
+    __UNSPEC_HOOK,
+    SOURCE,
+    DESTINATION,
+    __HOOK_MAX
+};
+
+#define HOOK_MAX ( __HOOK_MAX - 1 )
+
+enum van_rule_t
+{
+    __UNSPEC_RULE,
+    ACCEPT,
+    BLOCK,
+    REJECT,
+    __RULE_MAX
+};
+
+#define RULE_MAX ( __RULE_MAX - 1 )
+
 struct __attribute__((__packed__)) van_str_rule_t
 {
     uint32_t ip;
