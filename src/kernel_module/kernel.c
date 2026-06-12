@@ -271,24 +271,31 @@ static unsigned int ntf_pre_hook(void *priv, struct sk_buff *skb, const struct n
 
         if (GET_SIDE(rules->flags) == OUTPUT || 
             GET_RULE_TYPE(rules->flags) == ACCEPT || 
-            GET_RULE_TYPE(rules->flags) == REJECT) {
+            GET_RULE_TYPE(rules->flags) == REJECT)
+        {
             continue;
         }
 
-        if (rules->ip != 0 && rules->port != 0) {
-            if (!block_both(skb, rules)) {
+        if (rules->ip != 0 && rules->port != 0)
+        {
+            if (block_both(skb, rules) == NF_DROP)
+            {
                 pr_info_ratelimited("NetVanguard: DROP BOTH\n");
                 return NF_DROP;
             }
         } 
-        else if (rules->ip != 0) {
-            if (!block_ip(skb, rules)) {
+        else if (rules->ip != 0)
+        {
+            if (block_ip(skb, rules) == NF_DROP)
+            {
                 pr_info_ratelimited("NetVanguard: DROP IP\n");
                 return NF_DROP;
             }
         } 
-        else if (rules->port != 0) {
-            if (!block_port(skb, rules)) {
+        else if (rules->port != 0)
+        {
+            if (block_port(skb, rules) == NF_DROP)
+            {
                 pr_info_ratelimited("NetVanguard: DROP PORT\n");
                 return NF_DROP;
             }
@@ -296,44 +303,6 @@ static unsigned int ntf_pre_hook(void *priv, struct sk_buff *skb, const struct n
     }
 
     return NF_ACCEPT;
-
-    // for (i = 0; i < idx; i++)
-    // {
-    //     rules = genradix_ptr( &rule_genradix, i );
-    //     if(!rules) return NF_ACCEPT;
-
-    //     if( GET_SIDE( rules->flags ) == OUTPUT || GET_RULE_TYPE( rules->flags ) == ACCEPT || GET_RULE_TYPE( rules->flags ) == REJECT ) continue;
-
-    //     if ( rules->ip != 0 && rules->port != 0 )
-    //     {
-    //         // return block_both( skb, rules );
-    //         if(!block_both( skb, rules ))
-    //         {
-    //             printk( KERN_INFO "NetVanguard: DROP BOTH\n" );
-    //             return NF_DROP;
-    //         }
-    //     }
-    //     else if ( rules->ip   != 0 )
-    //     {
-    //         // return block_ip( skb, rules );
-    //         if(!block_ip( skb, rules ))
-    //         {
-    //             printk( KERN_INFO "NetVanguard: DROP IP\n" );
-    //             return NF_DROP;
-    //         }
-    //     }
-    //     else if ( rules->port != 0 )
-    //     {
-    //         // return block_port( skb, rules );
-    //         if(!block_port( skb, rules ))
-    //         {
-    //             printk( KERN_INFO "NetVanguard: DROP PORT\n" );
-    //             return NF_DROP;
-    //         }
-    //     }
-    // }
-
-    // return NF_ACCEPT;
 }
 
 static struct nf_hook_ops ntf_pre_ops =
