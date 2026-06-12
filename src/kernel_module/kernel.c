@@ -11,7 +11,6 @@
 
 static unsigned long idx;
 static GENRADIX(struct van_str_rule_t) rule_genradix;
-static struct genradix_iter *iter;
 
 static int pack_reply_message( struct genl_info **info, u32 status );
 
@@ -49,7 +48,10 @@ static int van_data_hook( struct sk_buff *skb, struct genl_info *info )
         db->flags = nla_get_u8( info->attrs[FW_ATTR_FLAG] );
 
         printk(KERN_INFO "NetVanguard: receive rule packet\n" );
-        printk(KERN_INFO "NetVanguard: # %ld IP: %pI4 | PORT: %d | FLAGS: %d\n", idx, &db->ip, db->port, db->flags );
+        printk(KERN_INFO "NetVanguard: # %ld IP: %pI4 | PORT: %d\n", idx, &db->ip, db->port );
+        printk(KERN_INFO "NetVanguard: # %ld SIDE: %s\n", idx, (GET_SIDE(db->flags) == INPUT) ? "INPUT" : "OUTPUT");
+        printk(KERN_INFO "NetVanguard: # %ld HOOK: %s\n", idx, (GET_HOOK_TYPE(db->flags) == SOURCE) ? "SOURCE" : "DESTINATION");
+        printk(KERN_INFO "NetVanguard: # %ld RULE: %s\n", idx, (GET_RULE_TYPE(db->flags) == ACCEPT) ? "ACCEPT" : (GET_RULE_TYPE(db->flags) == BLOCK) ? "BLOCK" : "REJECT");
 
         if ( pack_reply_message( &info, FW_REP_ICMP ) < 0 )
         {
@@ -171,32 +173,176 @@ static int pack_reply_message( struct genl_info **info, u32 status )
 //     .hooknum  = NF_INET_POST_ROUTING,
 //     .priority = NF_IP_PRI_FIRST,
 // };
+static unsigned int block_both(const struct sk_buff *skb, const struct van_str_rule_t *rules)
+{
+    if ( skb && rules )
+    {
+        u16 port = htons( rules->port );
 
-// static unsigned int ntf_pre_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
-// {
-//     struct iphdr *iph;
+        struct iphdr *iph = ip_hdr(skb);
+        struct tcphdr *tcph = tcp_hdr(skb);
 
-//     if (!skb) return NF_ACCEPT;
+        if (!iph || !tcph ) return NF_ACCEPT;
+        switch (GET_HOOK_TYPE(rules->flags))
+        {
+        case SOURCE:
+            if ( iph->saddr == rules->ip && tcph->source == port ) return NF_DROP;
+            break;
+        case DESTINATION:
+            if ( iph->daddr == rules->ip && tcph->dest == port ) return NF_DROP;
+            break;
+        default:
+            return NF_ACCEPT;
+        }
 
-//     iph = ip_hdr(skb);
-//     if (!iph) return NF_ACCEPT;
+    }
 
-//     // If the packet's source IP matches our blocked IP, drop it!
-//     if (blocked_ip != 0 && iph->saddr == blocked_ip) {
-//         printk_ratelimited(KERN_INFO "FW_BLOCKER: Dropping packet from %pI4\n", &iph->saddr);
-//         return NF_DROP;
-//     }
+    return NF_ACCEPT;
+}
 
-//     return NF_ACCEPT;
-// }
+static unsigned int block_ip(const struct sk_buff *skb, const struct van_str_rule_t *rules)
+{
+    if ( skb && rules )
+    {
+        struct iphdr *iph = ip_hdr(skb);
+        if (!iph) return NF_ACCEPT;
 
-// static struct nf_hook_ops ntf_pre_ops =
-// {
-//     .hook     = ntf_pre_hook,
-//     .pf       = NFPROTO_IPV4,
-//     .hooknum  = NF_INET_PRE_ROUTING,
-//     .priority = NF_IP_PRI_FIRST,
-// };
+        switch (GET_HOOK_TYPE(rules->flags))
+        {
+        case SOURCE:
+            if ( iph->saddr == rules->ip ) return NF_DROP;
+            break;
+        case DESTINATION:
+            if ( iph->daddr == rules->ip ) return NF_DROP;
+            break;
+        default:
+            return NF_ACCEPT;
+        }
+
+    }
+
+    return NF_ACCEPT;
+}
+
+static unsigned int block_port(const struct sk_buff *skb, const struct van_str_rule_t *rules)
+{
+    if ( skb && rules )
+    {
+        u16 port = htons( rules->port );
+
+        struct tcphdr *tcph = tcp_hdr(skb);
+        if ( !tcph ) return NF_ACCEPT;
+
+        switch (GET_HOOK_TYPE(rules->flags))
+        {
+        case SOURCE:
+            if ( tcph->source == port ) return NF_DROP;
+            break;
+        case DESTINATION:
+            if ( tcph->dest == port ) return NF_DROP;
+            break;
+        default:
+            return NF_ACCEPT;
+        }
+    }
+
+    return NF_ACCEPT;
+}
+
+static unsigned int ntf_pre_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+{
+    struct van_str_rule_t *rules;
+    struct genradix_iter iter;
+
+    if (!skb) return NF_ACCEPT;
+
+    struct iphdr *iph = ip_hdr(skb);
+    if (!iph) return NF_ACCEPT;
+
+    if ( iph->protocol != IPPROTO_TCP ) return NF_ACCEPT;
+
+    genradix_for_each(&rule_genradix, iter, rules)
+    {
+        if (iter.pos >= idx)
+            break;
+
+        if (!rules) 
+            return NF_ACCEPT;
+
+        if (GET_SIDE(rules->flags) == OUTPUT || 
+            GET_RULE_TYPE(rules->flags) == ACCEPT || 
+            GET_RULE_TYPE(rules->flags) == REJECT) {
+            continue;
+        }
+
+        if (rules->ip != 0 && rules->port != 0) {
+            if (!block_both(skb, rules)) {
+                pr_info_ratelimited("NetVanguard: DROP BOTH\n");
+                return NF_DROP;
+            }
+        } 
+        else if (rules->ip != 0) {
+            if (!block_ip(skb, rules)) {
+                pr_info_ratelimited("NetVanguard: DROP IP\n");
+                return NF_DROP;
+            }
+        } 
+        else if (rules->port != 0) {
+            if (!block_port(skb, rules)) {
+                pr_info_ratelimited("NetVanguard: DROP PORT\n");
+                return NF_DROP;
+            }
+        }
+    }
+
+    return NF_ACCEPT;
+
+    // for (i = 0; i < idx; i++)
+    // {
+    //     rules = genradix_ptr( &rule_genradix, i );
+    //     if(!rules) return NF_ACCEPT;
+
+    //     if( GET_SIDE( rules->flags ) == OUTPUT || GET_RULE_TYPE( rules->flags ) == ACCEPT || GET_RULE_TYPE( rules->flags ) == REJECT ) continue;
+
+    //     if ( rules->ip != 0 && rules->port != 0 )
+    //     {
+    //         // return block_both( skb, rules );
+    //         if(!block_both( skb, rules ))
+    //         {
+    //             printk( KERN_INFO "NetVanguard: DROP BOTH\n" );
+    //             return NF_DROP;
+    //         }
+    //     }
+    //     else if ( rules->ip   != 0 )
+    //     {
+    //         // return block_ip( skb, rules );
+    //         if(!block_ip( skb, rules ))
+    //         {
+    //             printk( KERN_INFO "NetVanguard: DROP IP\n" );
+    //             return NF_DROP;
+    //         }
+    //     }
+    //     else if ( rules->port != 0 )
+    //     {
+    //         // return block_port( skb, rules );
+    //         if(!block_port( skb, rules ))
+    //         {
+    //             printk( KERN_INFO "NetVanguard: DROP PORT\n" );
+    //             return NF_DROP;
+    //         }
+    //     }
+    // }
+
+    // return NF_ACCEPT;
+}
+
+static struct nf_hook_ops ntf_pre_ops =
+{
+    .hook     = ntf_pre_hook,
+    .pf       = NFPROTO_IPV4,
+    .hooknum  = NF_INET_PRE_ROUTING,
+    .priority = NF_IP_PRI_FIRST,
+};
 
 static int __init netvanguard_init( void )
 {
@@ -215,7 +361,7 @@ static int __init netvanguard_init( void )
         return ret;
     }
 
-    /*
+    
     ret = nf_register_net_hook( &init_net, &ntf_pre_ops );
     if ( ret < 0 )
     {
@@ -224,6 +370,7 @@ static int __init netvanguard_init( void )
         return ret;
     }
 
+    /*
     ret = nf_register_net_hook( &init_net, &ntf_post_ops );
     if ( ret < 0 )
     {
@@ -243,8 +390,9 @@ static void __exit netvanguard_exit( void )
 
     genradix_free( &rule_genradix );
 
-    /*
+    
     nf_unregister_net_hook(&init_net, &ntf_pre_ops);
+    /*
     nf_unregister_net_hook(&init_net, &ntf_post_ops);
     */
 
