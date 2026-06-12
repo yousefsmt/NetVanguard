@@ -11,7 +11,7 @@
 
 static void     pr_help( const char* str );
 static int      cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] );
-static uint32_t get_mode( uint32_t rule , const char* argv );
+static uint8_t  get_mode( const char* argv );
 
 int main( int argc, char *argv[] )
 {
@@ -105,32 +105,19 @@ static void pr_help( const char* str )
     exit(0x00);
 }
 
-static uint32_t get_mode( uint32_t rule , const char* argv )
+static uint8_t get_mode( const char* argv )
 {
-    const char *_type[] = { "ACCEPT", "BLOCK", "REJECT" };
-    size_t i;
-    for (i = 0; i < 3; i++)
+    const char *_type[] = { "", "ACCEPT", "BLOCK", "REJECT" };
+    uint8_t type;
+    for (type = 1; type < 4; type++)
     {
-        if ( strncmp( argv, _type[i], strlen( _type[i] ) ) == 0 )
+        if ( strncmp( argv, _type[type], strlen( _type[type] ) ) == 0 )
         {   
             break;
         }
     }
 
-    switch ( i )
-    {
-    case 0:
-        return rule - 2;
-    case 1:
-        return rule - 1;
-    case 2:
-        return rule;
-    default:
-        ERROR( "index invalid" );
-        break;
-    }
-
-    return rule - i;
+    return type;
 }
 
 static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
@@ -140,7 +127,6 @@ static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
         int    option_index;
         int    c;
         size_t i = 0;
-        uint32_t rule = 0;
         char *msg[] = { "add-rule", "remove-rule", "show", "help", NULL };
 
         memset( van_cli, 0, sizeof( struct van_cli_t ) );
@@ -191,7 +177,7 @@ static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
                 {"type",   required_argument, 0,  't'},
                 {"ip",     required_argument, 0,  'i'},
                 {"port",   required_argument, 0,  'p'},
-                {0,       0,                  0,   0 }
+                {0,        0,                 0,   0 }
             };
 
             c = getopt_long(argc, argv, "IOsdtip", long_options, &option_index);
@@ -202,27 +188,28 @@ static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
             {
             case 'I':
             {
-                rule = 5;
+                van_cli->rules.flags |= SET_SIDE( INPUT );
                 break;
             }
             case 'O':
             {
-                rule = 11;
+                van_cli->rules.flags |= SET_SIDE( OUTPUT );
                 break;
             }
             case 's':
             {
-                rule -= 3;
+                van_cli->rules.flags |= SET_HOOK_TYPE( SOURCE );
                 break;
             }
             case 'd':
             {
+                van_cli->rules.flags |= SET_HOOK_TYPE( DESTINATION );
                 break;
             }
             case 't':
             {
                 size_t idx = (strncmp(argv[optind-0x01], "-t", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
-                van_cli->rules.flags = get_mode( rule, argv[idx] );
+                van_cli->rules.flags |= SET_RULE_TYPE( get_mode( argv[idx] ) );
                 break;
             }
             case 'i':

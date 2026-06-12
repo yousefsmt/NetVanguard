@@ -5,6 +5,45 @@
 #include <netlink/netlink.h>
 #include "kernel.h"
 
+#define SET_SIDE( x )       ( ( x << 4 ) & 0x30 )
+#define SET_HOOK_TYPE( x )  ( ( x << 2 ) & 0x0c )
+#define SET_RULE_TYPE( x )  ( x  & 0x03 )
+
+#define GET_SIDE( x )      ( ( x & 0x30 ) >> 4 )  
+#define GET_HOOK_TYPE( x ) ( ( x & 0x0c ) >> 2 )
+#define GET_RULE_TYPE( x ) ( x & 0x03 )
+
+enum van_side_t
+{
+    __UNSPEC_SIDE,
+    INPUT,
+    OUTPUT,
+    __SIDE_MAX
+};
+
+#define SIDE_MAX ( __SIDE_MAX - 1 )
+
+enum van_hook_t
+{
+    __UNSPEC_HOOK,
+    SOURCE,
+    DESTINATION,
+    __HOOK_MAX
+};
+
+#define HOOK_MAX ( __HOOK_MAX - 1 )
+
+enum van_rule_t
+{
+    __UNSPEC_RULE,
+    ACCEPT,
+    BLOCK,
+    REJECT,
+    __RULE_MAX
+};
+
+#define RULE_MAX ( __RULE_MAX - 1 )
+
 enum van_log_t
 {
     DEBUG,
@@ -26,25 +65,6 @@ enum van_prog_t
 };
 
 #define VANGUARD_MAX ( __VANGUARD_MAX - 1 )
-
-enum van_mode_t
-{
-    VAN_IN_SRC_ACCEPT,
-    VAN_IN_SRC_BLOCK,
-    VAN_IN_SRC_REJECT,
-    VAN_IN_DEST_ACCEPT,
-    VAN_IN_DEST_BLOCK,
-    VAN_IN_DEST_REJECT,
-    VAN_OUT_SRC_ACCEPT,
-    VAN_OUT_SRC_BLOCK,
-    VAN_OUT_SRC_REJECT,
-    VAN_OUT_DEST_ACCEPT,
-    VAN_OUT_DEST_BLOCK,
-    VAN_OUT_DEST_REJECT,
-    __VAN_MODE_MAX
-};
-
-#define VAN_MODE_MAX ( __VAN_MODE_MAX - 1 )
 
 struct van_cli_t
 {
