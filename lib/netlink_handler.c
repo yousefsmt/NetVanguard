@@ -5,62 +5,17 @@
 #include "netlink_handler.h"
 #include "parser.h"
 
-static int reply_to_str( uint32_t id, char *buffer )
+static int reply_to_str( uint32_t id )
 {
-    switch ( id )
+    if ( ( id & REMOVE_BYTE ) == REMOVE_BYTE )
     {
-    case FW_REP_SRC_BLOCK_IP:
-    {
-        strncpy( buffer, "FW_REP_SRC_BLOCK_IP", BUFFER_MAPPER_SIZE );
-        break;
+        uint8_t _id = GET_ID( id );
+        SUCCESS("Kernel response to user : Hey user, I removed rule with id: %d\n", _id );
+        return 0;
     }
-    case FW_REP_DEST_BLOCK_IP:
-    {
-        strncpy( buffer, "FW_REP_DEST_BLOCK_IP", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_SRC_ACCEPT_IP:
-    {
-        strncpy( buffer, "FW_REP_SRC_ACCEPT_IP", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_DEST_ACCEPT_IP:
-    {
-        strncpy( buffer, "FW_REP_DEST_ACCEPT_IP", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_SRC_BLOCK_PORT:
-    {
-        strncpy( buffer, "FW_REP_SRC_BLOCK_PORT", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_DEST_BLOCK_PORT:
-    {
-        strncpy( buffer, "FW_REP_DEST_BLOCK_PORT", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_SRC_ACCEPT_PORT:
-    {
-        strncpy( buffer, "FW_REP_SRC_ACCEPT_PORT", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_DEST_ACCEPT_PORT:
-    {
-        strncpy( buffer, "FW_REP_DEST_ACCEPT_PORT", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    case FW_REP_ICMP:
-    {
-        strncpy( buffer, "FW_REP_ICMP", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    default:
-    {
-        strncpy( buffer, "Invalid ID", BUFFER_MAPPER_SIZE );
-        break;
-    }
-    }
-
+    SUCCESS( "Kernel response to user : Hey user, I added below rule:\nSIDE: %s\nHOOK: %s\nRULE: %s\n", (GET_SIDE(id) == INPUT) ? "INPUT" : "OUTPUT",
+                                                                                                     (GET_HOOK_TYPE(id) == SOURCE) ? "SOURCE" : "DESTINATION",
+                                                                                                     (GET_RULE_TYPE(id) == ACCEPT) ? "ACCEPT" : (GET_RULE_TYPE(id) == BLOCK) ? "BLOCK" : "REJECT");
     return 0;
 }
 
@@ -70,14 +25,8 @@ static int netlink_socket_reply_procces( struct nl_msg *msg, void *arg )
 
 	struct genlmsghdr *genlhdr = nlmsg_data( nlmsg_hdr( msg ) );
 	struct nlattr	  *tb[FW_ATTR_MAX + 1];
-
-    char               buffer[BUFFER_MAPPER_SIZE];
-
     uint32_t           id;
-
     int		           err;
-
-    memset( buffer, 0, BUFFER_MAPPER_SIZE );
 
 	err = nla_parse( tb, FW_ATTR_MAX, genlmsg_attrdata( genlhdr, 0 ),
 			         genlmsg_attrlen( genlhdr, 0 ), NULL );
@@ -95,14 +44,12 @@ static int netlink_socket_reply_procces( struct nl_msg *msg, void *arg )
 	}
 
     id  = nla_get_u32( tb[FW_ATTR_ACK] );
-    err = reply_to_str( id, buffer );
+    err = reply_to_str( id );
     if ( err < 0 )
     {
         printf( "failed to to map id to string\n" );
 		return NL_SKIP;
     }
-
-	printf("message received: %s\n", buffer );
 
 	return NL_OK;
 }

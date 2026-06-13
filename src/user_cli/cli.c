@@ -41,11 +41,24 @@ int main( int argc, char *argv[] )
         return -1;
     }
 
-    err = netlink_socket_pack_msg( &van_cli.socket, &van_cli.msg, &van_cli.hdr, &van_cli.rules, family_id, FW_CMD_REQUEST );
-    if ( err < 0 )
+    if ( ( van_cli.rules.flags & REMOVE_BYTE ) == REMOVE_BYTE )
     {
-        ERROR( "During packing message error occur!!\n");
-        return -1;
+        err = netlink_socket_pack_msg( &van_cli.socket, &van_cli.msg, &van_cli.hdr, &van_cli.rules, family_id, FW_CMD_REMOVE );
+        if ( err < 0 )
+        {
+            ERROR( "During packing message error occur!!\n");
+            return -1;
+        }
+
+    }
+    else
+    {
+        err = netlink_socket_pack_msg( &van_cli.socket, &van_cli.msg, &van_cli.hdr, &van_cli.rules, family_id, FW_CMD_REQUEST );
+        if ( err < 0 )
+        {
+            ERROR( "During packing message error occur!!\n");
+            return -1;
+        }
     }
 
     err = netlink_socket_send_msg( &van_cli.socket, &van_cli.msg );
@@ -149,9 +162,9 @@ static int cli_parser( struct van_cli_t* van_cli, int argc, char* argv[] )
         case 0:
             break;
         case 1:
-            /* TODO: must remove rule*/
-            pr_help("!!!! Not Supported !!!!");
-            break;
+            uint8_t id = strtol( argv[2], NULL, 10 );
+            van_cli->rules.flags = ( REMOVE_BYTE | id );
+            return 0;
         case 2:
             /* TODO: must show database*/
              pr_help("!!!! Not Supported !!!!");

@@ -13,6 +13,9 @@
 #define GET_HOOK_TYPE( x ) ( ( x & 0x0c ) >> 2 )
 #define GET_RULE_TYPE( x ) ( x & 0x03 )
 
+#define REMOVE_BYTE ( 0xC0 )
+#define GET_ID( x ) ( x & 0x3f )
+
 enum van_side_t
 {
     __UNSPEC_SIDE,
@@ -53,27 +56,12 @@ struct __attribute__((__packed__)) van_str_rule_t
 
 #define NL_PACKET_SIZE ( sizeof( struct van_str_rule_t ) )
 
-enum van_reply_ip_t
-{
-    FW_REP_SRC_BLOCK_IP,
-    FW_REP_DEST_BLOCK_IP,
-    FW_REP_SRC_ACCEPT_IP,
-    FW_REP_DEST_ACCEPT_IP,
-    FW_REP_SRC_BLOCK_PORT,
-    FW_REP_DEST_BLOCK_PORT,
-    FW_REP_SRC_ACCEPT_PORT,
-    FW_REP_DEST_ACCEPT_PORT,
-    FW_REP_ICMP,
-    __FW_REP_MAX
-};
-
-#define FW_REP_MAX (__FW_REP_MAX - 1)
-
 enum van_cmd_t
 {
     FW_CMD_UNSPEC,
     FW_CMD_REQUEST,
     FW_CMD_RESPONSE,
+    FW_CMD_REMOVE,
     __FW_CMD_MAX
 };
 
