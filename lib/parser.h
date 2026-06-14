@@ -4,6 +4,10 @@
 #include <signal.h>
 #include "types.h"
 
+#define VER_MAJ ( LINUX_VERSION_CODE >> 16 )
+#define VER_MIN ( ( LINUX_VERSION_CODE - ( VER_MAJ << 16 ) ) >> 8 )
+#define VER_PAT ( LINUX_VERSION_CODE - ( VER_MAJ << 16 ) - ( VER_MIN << 8 ) )
+
 #define DEBUG( msg... )   pr_log( DEBUG, msg )
 #define SUCCESS( msg... ) pr_log( SUCCESS, msg )
 #define WARNING( msg... ) pr_log( WARNING, msg )

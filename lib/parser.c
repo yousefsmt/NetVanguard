@@ -42,10 +42,6 @@ void handler_signal(int sig)
 
 static void pr_sh_help(const char *prog_name)
 {
-    int maj = LINUX_VERSION_CODE >> 16;
-    int min = ( LINUX_VERSION_CODE - ( maj << 16 ) ) >> 8;
-    int pat = LINUX_VERSION_CODE - ( maj << 16 ) - ( min << 8 );
-
     printf(
         "NetVanguard-CLI v0.1.0 - Lightweight iptables Firewall\n"
         "Kernel Version: %d.%d.%d\n"
@@ -55,7 +51,7 @@ static void pr_sh_help(const char *prog_name)
         "Usage: %s show [options]\n\n"
         "Options:\n"
         "  -v, --verbose               Show more detail about each rule\n",
-        maj, min, pat, prog_name
+        VER_MAJ, VER_MIN, VER_PAT, prog_name
     );
     
     exit(EXIT_SUCCESS);
@@ -63,9 +59,6 @@ static void pr_sh_help(const char *prog_name)
 
 static void pr_rm_help(const char *prog_name)
 {
-    int maj = LINUX_VERSION_CODE >> 16;
-    int min = ( LINUX_VERSION_CODE - ( maj << 16 ) ) >> 8;
-    int pat = LINUX_VERSION_CODE - ( maj << 16 ) - ( min << 8 );
 
     printf(
         "NetVanguard-CLI v0.1.0 - Lightweight iptables Firewall\n"
@@ -81,7 +74,7 @@ static void pr_rm_help(const char *prog_name)
         "      Remove rule stored on index of 5\n\n"
         "  %s remove-rule --index 3\n"
         "      Remove rule stored on index of 5 (same as above)\n\n",
-        maj, min, pat, prog_name, prog_name, prog_name
+        VER_MAJ, VER_MIN, VER_PAT, prog_name, prog_name, prog_name
     );
     
     exit(EXIT_SUCCESS);
@@ -89,9 +82,6 @@ static void pr_rm_help(const char *prog_name)
 
 static void pr_add_help(const char *prog_name)
 {
-    int maj = LINUX_VERSION_CODE >> 16;
-    int min = ( LINUX_VERSION_CODE - ( maj << 16 ) ) >> 8;
-    int pat = LINUX_VERSION_CODE - ( maj << 16 ) - ( min << 8 );
 
     printf(
         "NetVanguard-CLI v0.1.0 - Lightweight iptables Firewall\n"
@@ -118,7 +108,7 @@ static void pr_add_help(const char *prog_name)
         "Requirements:\n"
         "  * Direction is mandatory: You must specify either -I (--input) or -O (--output).\n"
         "  * Criteria is mandatory: You must provide at least an IP address (-i) or a port (-p).\n",
-        maj, min, pat, prog_name, prog_name, prog_name, prog_name
+        VER_MAJ, VER_MIN, VER_PAT, prog_name, prog_name, prog_name, prog_name
     );
     
     exit(EXIT_SUCCESS);
@@ -126,9 +116,6 @@ static void pr_add_help(const char *prog_name)
 
 static void pr_main_help(const char *prog_name)
 {
-    int maj = LINUX_VERSION_CODE >> 16;
-    int min = ( LINUX_VERSION_CODE - ( maj << 16 ) ) >> 8;
-    int pat = LINUX_VERSION_CODE - ( maj << 16 ) - ( min << 8 );
 
     printf(
         "NetVanguard-CLI v0.1.0 - Lightweight iptables Firewall\n"
@@ -143,7 +130,7 @@ static void pr_main_help(const char *prog_name)
         "  show              Display active database rules\n"
         "  help              Display this help message and exit\n\n"
         "Report bugs to: <yoosefsamet@gmail.com>\n",
-        maj, min, pat, prog_name
+        VER_MAJ, VER_MIN, VER_PAT, prog_name
     );
     exit(0x00);
 }
@@ -168,7 +155,8 @@ static int cli_add_parser(struct van_cli_t* van_cli, int argc, char* argv[])
     int option_index;
     int c;
 
-    if(argc==2)pr_add_help(name);
+    if(argc == 2)
+        pr_add_help(name);
 
     memset(van_cli, 0, sizeof(struct van_cli_t));
 
@@ -236,7 +224,8 @@ static int cli_add_parser(struct van_cli_t* van_cli, int argc, char* argv[])
             pr_add_help(name);
             break;
         default:
-            ERROR( "argument parser returned character code 0%o is NOT valid!!!", c);
+            ERROR( "add-rule: options parse failed[%o].", c);
+            return -1;
         }
     }
 
@@ -248,7 +237,8 @@ static int cli_rm_parser(struct van_cli_t* van_cli, int argc, char* argv[])
     int option_index;
     int c;
 
-    if(argc==2)pr_rm_help(name);
+    if(argc == 2)
+        pr_rm_help(name);
 
     memset( van_cli, 0, sizeof( struct van_cli_t ) );
 
@@ -272,6 +262,9 @@ static int cli_rm_parser(struct van_cli_t* van_cli, int argc, char* argv[])
         {
             size_t idx = (strncmp(argv[optind-0x01], "-i", 0x02UL) == 0x00) ? (size_t)(optind) : (size_t)(optind-0x01);
             uint8_t id = strtol( argv[idx], NULL, 10 );
+            if(id > 10)
+                return -1;
+
             van_cli->rules.flags = ( REMOVE_BYTE | id );
             break;
         }
@@ -291,7 +284,8 @@ static int cli_sh_parser(struct van_cli_t* van_cli, int argc, char* argv[])
     int option_index;
     int c;
 
-    if(argc == 2)pr_sh_help(name);
+    if(argc == 2)
+        pr_sh_help(name);
 
     memset(van_cli, 0, sizeof(struct van_cli_t));
 
@@ -357,7 +351,9 @@ int cli_parser(struct van_cli_t* van_cli, int argc, char* argv[])
 {
     if (van_cli)
     {
-        if (argc < 2)pr_main_help(name);
+        if (argc < 2)
+            pr_main_help(name);
+
         size_t i = 0;
         const char *msg[] = { "add-rule", "remove-rule", "show", "help" };
         const size_t it[] = {9, 12, 5, 5};
