@@ -2,15 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.1.0] - 2014-05-31
+## [v0.1.1] - 2026-06-14
 
 ### Added
 
-- This CHANGELOG file to hopefully serve as an evolving example of a
-  standardized open source project CHANGELOG.
-- CNAME file to enable GitHub Pages custom domain.
-- README now contains answers to common questions about CHANGELOGs.
-- Good examples and basic guidelines, including proper date formatting.
-- Counter-examples: "What makes unicorns cry?".
+- Simple remove rule like "./netvanguard-cli remove-rule 1" removed index 1
 
-[v0.1.0]: https://github.com/yousefsmt/NetVanguard.git
+### Fixed
+
+- Change reply format with bit mask, remove redundancy
+
+## [v0.1.0] - 2026-06-13
+
+### Added
+
+- Kernel-netfilter module with Netfilter hook integration
+- CLI tools for rule addition and deletion
+- Radix tree-based index database for efficient rule storage
+- Test suite covering netlink and TCP socket communication
+- Generic netlink API for user-kernel space IPC
+- Pre-routing and post-routing Netfilter hooks
+
+[v0.1.0]: https://github.com/yousefsmt/NetVanguard/tree/v0.1.0
+[v0.1.1]: https://github.com/yousefsmt/NetVanguard/tree/v0.1.1
