@@ -4,15 +4,13 @@
 #include <signal.h>
 #include "types.h"
 
-#define DEBUG( msg... )   debug_msg( DEBUG, msg )
-#define SUCCESS( msg... ) debug_msg( SUCCESS, msg )
-#define WARNING( msg... ) debug_msg( WARNING, msg )
-#define ERROR( msg... )   debug_msg( ERROR, msg )
+#define DEBUG( msg... )   pr_log( DEBUG, msg )
+#define SUCCESS( msg... ) pr_log( SUCCESS, msg )
+#define WARNING( msg... ) pr_log( WARNING, msg )
+#define ERROR( msg... )   pr_log( ERROR, msg )
 
-int handler_options( void *config, int argc, char *argv[],
-                     help_t cb, parser_t parser, int type );
-void handler_signal( int signal );
-
-void debug_msg( enum van_log_t level, const char * fmt, ...);
+void handler_signal(int signal);
+int cli_parser(struct van_cli_t* van_cli, int argc, char* argv[]);
+void pr_log( enum van_log_t level, const char * fmt, ...);
 
 #endif /* NETVANGUARD_LIB_PARSER_H_ */
