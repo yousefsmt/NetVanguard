@@ -4,6 +4,7 @@ AC_INIT([NetVanguard], [1.0], [yoosefsamet@gmail.com])
 AC_CONFIG_SRCDIR([lib/tcp_handler.c])
 AC_CONFIG_SRCDIR([lib/netlink_handler.c])
 AC_CONFIG_SRCDIR([lib/parser.c])
+AC_CONFIG_SRCDIR([lib/uds_handler.c])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])

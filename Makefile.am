@@ -7,14 +7,16 @@ lib_LTLIBRARIES = libClp.la
 libClp_la_SOURCES = \
 					$(top_srcdir)/lib/tcp_handler.c \
 					$(top_srcdir)/lib/parser.c \
-					$(top_srcdir)/lib/netlink_handler.c
+					$(top_srcdir)/lib/netlink_handler.c \
+					$(top_srcdir)/lib/uds_handler.c
 libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 libClp_la_LIBADD = $(LIBNL3_LIBS)
 
 pkginclude_HEADERS = \
 					$(top_srcdir)/lib/tcp_handler.h \
 					$(top_srcdir)/lib/parser.h \
-					$(top_srcdir)/lib/netlink_handler.h
+					$(top_srcdir)/lib/netlink_handler.h \
+					$(top_srcdir)/lib/uds_handler.h
 
 sbin_PROGRAMS = netvanguardd
 bin_PROGRAMS = netvanguard-cli
@@ -29,7 +31,8 @@ netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 check_PROGRAMS = \
 				tests/tcp_simple_connection/tcp_test \
-				tests/netlink_simple_connection/netlink_test
+				tests/netlink_simple_connection/netlink_test \
+				tests/uds_simple_connection/uds_test
 
 tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
 tests_tcp_simple_connection_tcp_test_LDADD = libClp.la $(LIBNL3_LIBS)
@@ -38,6 +41,10 @@ tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 tests_netlink_simple_connection_netlink_test_SOURCES = tests/netlink_simple_connection/netlink_connection.c
 tests_netlink_simple_connection_netlink_test_LDADD = libClp.la $(LIBNL3_LIBS)
 tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+
+tests_uds_simple_connection_uds_test_SOURCES = tests/uds_simple_connection/uds_connection.c
+tests_uds_simple_connection_uds_test_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_uds_simple_connection_uds_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 EXTRA_DIST = \
 	VERSION \
