@@ -2,40 +2,51 @@
 #include <stdio.h>
 
 #include "uds_handler.h"
+#include "parser.h"
 
 int uds_socket_init(struct uds_config_t *config, const char *addr,
 		    size_t addr_len)
 {
 	int err;
 
-	config->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (config->sock < 0) {
-		perror("socket()");
+	if(addr_len > 108)
 		return -1;
-	}
 
-	config->addr.sun_family = AF_UNIX;
-	strncpy(config->addr.sun_path, addr, addr_len);
-	strncpy(config->addr_str, addr, addr_len);
-	config->len = sizeof(struct sockaddr_un);
-	unlink(addr);
+	if(config) {
+		config->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+		if (config->sock < 0) {
+			perror("socket()");
+			ERROR("UDS socket creation failed!!");
+			return -1;
+		}
 
-	err = bind(config->sock, (const struct sockaddr *)&config->addr,
-		   config->len);
-	if (err < 0) {
-		perror("bind()");
-		close(config->sock);
+		config->addr.sun_family = AF_UNIX;
+		strncpy(config->addr.sun_path, addr, addr_len);
+		strncpy(config->addr_str, addr, addr_len);
+		config->len = sizeof(struct sockaddr_un);
 		unlink(addr);
+
+		err = bind(config->sock, (const struct sockaddr *)&config->addr,
+			config->len);
+		if (err < 0) {
+			perror("bind()");
+			ERROR("UDS bind socket failed!!");
+			close(config->sock);
+			unlink(addr);
+			return -1;
+		}
+	}
+	else {
 		return -1;
 	}
 
 	return 0;
 }
 
-int uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
+ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
 {
 	struct sockaddr_un cli_addr;
-	socklen_t cli_len = 0;
+	socklen_t cli_len;
 	ssize_t recv_bytes;
 
 	if (config) {
@@ -55,14 +66,14 @@ int uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
 		return -1;
 	}
 
-	return 0;
+	return recv_bytes;
 }
 
-int uds_socket_send(struct uds_config_t *config, const char *msg,
+ssize_t uds_socket_send(struct uds_config_t *config, const char *msg,
 		    size_t msg_len, const char *addr, size_t addr_len)
 {
 	struct sockaddr_un cli_addr;
-	socklen_t cli_len = 0;
+	socklen_t cli_len;
 	ssize_t send_bytes;
 
 	cli_addr.sun_family = AF_UNIX;
@@ -77,7 +88,7 @@ int uds_socket_send(struct uds_config_t *config, const char *msg,
 		unlink(config->addr_str);
 		return -1;
 	}
-	return 0;
+	return send_bytes;
 }
 
 int uds_socket_close(struct uds_config_t *config)

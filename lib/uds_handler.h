@@ -13,9 +13,9 @@ struct uds_config_t {
 
 int uds_socket_init(struct uds_config_t *config, const char *addr,
 		    size_t addr_len);
-int uds_socket_send(struct uds_config_t *config, const char *msg,
+ssize_t uds_socket_send(struct uds_config_t *config, const char *msg,
 		    size_t msg_len, const char *addr, size_t addr_len);
-int uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len);
+ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len);
 int uds_socket_close(struct uds_config_t *config);
 
 #endif /* NETVANGUARD_LIB_UDS_HANDLER_H_ */

@@ -30,21 +30,31 @@ netvanguard_cli_LDADD = libClp.la $(LIBNL3_LIBS)
 netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 check_PROGRAMS = \
-				tests/tcp_simple_connection/tcp_test \
 				tests/netlink_simple_connection/netlink_test \
-				tests/uds_simple_connection/uds_test
+				tests/tcp_simple_connection/tcp_server \
+				tests/tcp_simple_connection/tcp_client \
+				tests/uds_simple_connection/uds_server \
+				tests/uds_simple_connection/uds_client
 
-tests_tcp_simple_connection_tcp_test_SOURCES = tests/tcp_simple_connection/tcp_connection.c
-tests_tcp_simple_connection_tcp_test_LDADD = libClp.la $(LIBNL3_LIBS)
-tests_tcp_simple_connection_tcp_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+tests_tcp_simple_connection_tcp_server_SOURCES = tests/tcp_simple_connection/tcp_server.c
+tests_tcp_simple_connection_tcp_server_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_tcp_simple_connection_tcp_server_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+
+tests_tcp_simple_connection_tcp_client_SOURCES = tests/tcp_simple_connection/tcp_client.c
+tests_tcp_simple_connection_tcp_client_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_tcp_simple_connection_tcp_client_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 tests_netlink_simple_connection_netlink_test_SOURCES = tests/netlink_simple_connection/netlink_connection.c
 tests_netlink_simple_connection_netlink_test_LDADD = libClp.la $(LIBNL3_LIBS)
 tests_netlink_simple_connection_netlink_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
-tests_uds_simple_connection_uds_test_SOURCES = tests/uds_simple_connection/uds_connection.c
-tests_uds_simple_connection_uds_test_LDADD = libClp.la $(LIBNL3_LIBS)
-tests_uds_simple_connection_uds_test_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+tests_uds_simple_connection_uds_server_SOURCES = tests/uds_simple_connection/uds_server.c
+tests_uds_simple_connection_uds_server_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_uds_simple_connection_uds_server_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+
+tests_uds_simple_connection_uds_client_SOURCES = tests/uds_simple_connection/uds_client.c
+tests_uds_simple_connection_uds_client_LDADD = libClp.la $(LIBNL3_LIBS)
+tests_uds_simple_connection_uds_client_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 EXTRA_DIST = \
 	VERSION \
