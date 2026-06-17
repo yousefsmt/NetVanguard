@@ -9,37 +9,84 @@
 #include "parser.h"
 
 ssize_t tcp_socket_read(struct socket_config_t *socket_config, char *buffer,
-			const size_t buffer_size)
+			const size_t buffer_size,
+			enum socket_type_t socket_type)
 {
-	ssize_t read_byte;
+	ssize_t read_byte = 0;
 
-	read_byte =
-		recv(socket_config->client.client_fd, buffer, buffer_size, 0);
-	if ((size_t)read_byte < buffer_size) {
-		perror("read()");
-		close(socket_config->socket_fd);
-		close(socket_config->client.client_fd);
-		return -1;
+	if (socket_config) {
+		switch (socket_type) {
+		case SERVER_SIDE: {
+			read_byte = recv(socket_config->client.client_fd,
+					 buffer, buffer_size, 0);
+			if ((size_t)read_byte < buffer_size) {
+				perror("read()");
+				close(socket_config->socket_fd);
+				close(socket_config->client.client_fd);
+				return -1;
+			}
+			SUCCESS("socket with %d id read %ld bytes",
+				socket_config->client.client_fd, read_byte);
+			break;
+		}
+		case CLIENT_SIDE: {
+			read_byte = recv(socket_config->socket_fd, buffer,
+					 buffer_size, 0);
+			if ((size_t)read_byte < buffer_size) {
+				perror("read()");
+				close(socket_config->socket_fd);
+				close(socket_config->client.client_fd);
+				return -1;
+			}
+			SUCCESS("socket with %d id read %ld bytes",
+				socket_config->socket_fd, read_byte);
+			break;
+		}
+		default:
+			return -1;
+		}
 	}
-	SUCCESS("socket with %d id read %ld bytes",
-		socket_config->client.client_fd, read_byte);
 	SUCCESS("\tMessage: %s, Length: %ld", buffer, buffer_size);
 
 	return read_byte;
 }
 
 ssize_t tcp_socket_send(struct socket_config_t *socket_config,
-			const char *message, size_t message_len)
+			const char *message, size_t message_len,
+			enum socket_type_t socket_type)
 {
-	ssize_t send_byte =
-		send(socket_config->socket_fd, message, message_len, 0);
-	if (send_byte < 15) {
-		perror("send()");
-		close(socket_config->socket_fd);
+	ssize_t send_byte = 0;
+
+	switch (socket_type) {
+	case SERVER_SIDE: {
+		send_byte = send(socket_config->client.client_fd, message,
+				 message_len, 0);
+		if (send_byte < 15) {
+			perror("send()");
+			close(socket_config->socket_fd);
+			return -1;
+		}
+		SUCCESS("socket with %d id send %ld bytes",
+			socket_config->client.client_fd, send_byte);
+		break;
+	}
+
+	case CLIENT_SIDE: {
+		send_byte =
+			send(socket_config->socket_fd, message, message_len, 0);
+		if (send_byte < 15) {
+			perror("send()");
+			close(socket_config->socket_fd);
+			return -1;
+		}
+		SUCCESS("socket with %d id send %ld bytes",
+			socket_config->socket_fd, send_byte);
+		break;
+	}
+
+	default:
 		return -1;
 	}
-	SUCCESS("socket with %d id send %ld bytes", socket_config->socket_fd,
-		send_byte);
 	SUCCESS("\tMessage: %s, Length: %ld", message, message_len);
 
 	return send_byte;
@@ -79,14 +126,13 @@ static int tcp_socket_connecting(struct socket_config_t *socket_config)
 {
 	int ret;
 	socket_config->server.addr.sin_family = AF_INET;
-	ret = inet_pton(AF_INET, socket_config->server.ip_addr,
+	ret = inet_pton(AF_INET, "127.0.1.20",
 			&socket_config->server.addr.sin_addr.s_addr);
 	if (ret < 0) {
 		perror("inet_pton()");
 		return -1;
 	}
-	socket_config->server.addr.sin_port =
-		htons(socket_config->server.port_addr);
+	socket_config->server.addr.sin_port = htons(2030);
 	socket_config->server.length = sizeof(struct sockaddr_in);
 
 	ret = connect(socket_config->socket_fd,

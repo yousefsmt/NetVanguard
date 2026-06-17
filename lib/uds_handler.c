@@ -9,10 +9,10 @@ int uds_socket_init(struct uds_config_t *config, const char *addr,
 {
 	int err;
 
-	if(addr_len > 108)
+	if (addr_len > 108)
 		return -1;
 
-	if(config) {
+	if (config) {
 		config->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 		if (config->sock < 0) {
 			perror("socket()");
@@ -27,7 +27,7 @@ int uds_socket_init(struct uds_config_t *config, const char *addr,
 		unlink(addr);
 
 		err = bind(config->sock, (const struct sockaddr *)&config->addr,
-			config->len);
+			   config->len);
 		if (err < 0) {
 			perror("bind()");
 			ERROR("UDS bind socket failed!!");
@@ -35,8 +35,7 @@ int uds_socket_init(struct uds_config_t *config, const char *addr,
 			unlink(addr);
 			return -1;
 		}
-	}
-	else {
+	} else {
 		return -1;
 	}
 
@@ -70,7 +69,7 @@ ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
 }
 
 ssize_t uds_socket_send(struct uds_config_t *config, const char *msg,
-		    size_t msg_len, const char *addr, size_t addr_len)
+			size_t msg_len, const char *addr, size_t addr_len)
 {
 	struct sockaddr_un cli_addr;
 	socklen_t cli_len;

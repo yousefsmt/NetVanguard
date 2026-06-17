@@ -35,10 +35,12 @@ int tcp_socket_init(struct socket_config_t *socket_config,
 		    const uint16_t port_addr);
 
 ssize_t tcp_socket_send(struct socket_config_t *socket_config,
-			const char *message, const size_t message_len);
+			const char *message, const size_t message_len,
+			enum socket_type_t socket_type);
 
 ssize_t tcp_socket_read(struct socket_config_t *socket_config, char *buffer,
-			const size_t buffer_size);
+			const size_t buffer_size,
+			enum socket_type_t socket_type);
 
 int tcp_socket_close(struct socket_config_t *socket_config,
 		     enum socket_type_t socket_type);
