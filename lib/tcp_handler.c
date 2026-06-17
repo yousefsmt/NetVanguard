@@ -13,29 +13,29 @@ ssize_t tcp_socket_read(struct socket_config_t *socket_config, char *buffer,
 			enum socket_type_t socket_type)
 {
 	ssize_t read_byte = 0;
-
+	memset(buffer, 0, buffer_size);
 	if (socket_config) {
 		switch (socket_type) {
 		case SERVER_SIDE: {
-			read_byte = recv(socket_config->client.client_fd,
-					 buffer, buffer_size, 0);
-			if ((size_t)read_byte < buffer_size) {
+			read_byte = recv(socket_config->_socket_fd, buffer,
+					 buffer_size, 0);
+			if (read_byte < 0) {
 				perror("read()");
 				close(socket_config->socket_fd);
-				close(socket_config->client.client_fd);
+				close(socket_config->_socket_fd);
 				return -1;
 			}
 			SUCCESS("socket with %d id read %ld bytes",
-				socket_config->client.client_fd, read_byte);
+				socket_config->_socket_fd, read_byte);
 			break;
 		}
 		case CLIENT_SIDE: {
 			read_byte = recv(socket_config->socket_fd, buffer,
 					 buffer_size, 0);
-			if ((size_t)read_byte < buffer_size) {
+			if (read_byte < 0) {
 				perror("read()");
 				close(socket_config->socket_fd);
-				close(socket_config->client.client_fd);
+				close(socket_config->_socket_fd);
 				return -1;
 			}
 			SUCCESS("socket with %d id read %ld bytes",
@@ -45,6 +45,8 @@ ssize_t tcp_socket_read(struct socket_config_t *socket_config, char *buffer,
 		default:
 			return -1;
 		}
+	} else {
+		ERROR("config invalid!!");
 	}
 	SUCCESS("\tMessage: %s, Length: %ld", buffer, buffer_size);
 
@@ -56,36 +58,38 @@ ssize_t tcp_socket_send(struct socket_config_t *socket_config,
 			enum socket_type_t socket_type)
 {
 	ssize_t send_byte = 0;
-
-	switch (socket_type) {
-	case SERVER_SIDE: {
-		send_byte = send(socket_config->client.client_fd, message,
-				 message_len, 0);
-		if (send_byte < 15) {
-			perror("send()");
-			close(socket_config->socket_fd);
+	if (socket_config) {
+		switch (socket_type) {
+		case SERVER_SIDE: {
+			send_byte = send(socket_config->_socket_fd, message,
+					 message_len, 0);
+			if (send_byte < 0) {
+				perror("send()");
+				close(socket_config->socket_fd);
+				return -1;
+			}
+			SUCCESS("socket with %d id send %ld bytes",
+				socket_config->_socket_fd, send_byte);
+			break;
+		}
+		case CLIENT_SIDE: {
+			send_byte = send(socket_config->socket_fd, message,
+					 message_len, 0);
+			if (send_byte < 0) {
+				perror("send()");
+				close(socket_config->socket_fd);
+				return -1;
+			}
+			SUCCESS("socket with %d id send %ld bytes",
+				socket_config->socket_fd, send_byte);
+			break;
+		}
+		default:
 			return -1;
 		}
-		SUCCESS("socket with %d id send %ld bytes",
-			socket_config->client.client_fd, send_byte);
-		break;
-	}
 
-	case CLIENT_SIDE: {
-		send_byte =
-			send(socket_config->socket_fd, message, message_len, 0);
-		if (send_byte < 15) {
-			perror("send()");
-			close(socket_config->socket_fd);
-			return -1;
-		}
-		SUCCESS("socket with %d id send %ld bytes",
-			socket_config->socket_fd, send_byte);
-		break;
-	}
-
-	default:
-		return -1;
+	} else {
+		ERROR("config invalid!!");
 	}
 	SUCCESS("\tMessage: %s, Length: %ld", message, message_len);
 
@@ -106,38 +110,39 @@ static int tcp_socket_listening(struct socket_config_t *socket_config,
 	SUCCESS("scoket[%d] on listen mode with %d connections",
 		socket_config->socket_fd, max_connections);
 
-	socket_config->client.client_fd =
+	socket_config->_socket_fd =
 		accept(socket_config->socket_fd,
-		       (struct sockaddr *)&socket_config->client.addr,
-		       &socket_config->client.length);
-	if (socket_config->client.client_fd < 0) {
+		       (struct sockaddr *)&socket_config->addr,
+		       &socket_config->length);
+	if (socket_config->_socket_fd < 0) {
 		perror("accept()");
 		close(socket_config->socket_fd);
-		close(socket_config->client.client_fd);
+		close(socket_config->_socket_fd);
 		return -1;
 	}
 	SUCCESS("scoket[%d] accept connection and create new socket with %d id",
-		socket_config->socket_fd, socket_config->client.client_fd);
+		socket_config->socket_fd, socket_config->_socket_fd);
 
 	return 0;
 }
 
 static int tcp_socket_connecting(struct socket_config_t *socket_config)
 {
+	struct sockaddr_in cli_addr;
+	socklen_t cli_len;
 	int ret;
-	socket_config->server.addr.sin_family = AF_INET;
-	ret = inet_pton(AF_INET, "127.0.1.20",
-			&socket_config->server.addr.sin_addr.s_addr);
+
+	cli_addr.sin_family = AF_INET;
+	cli_addr.sin_port = htons(2030);
+	ret = inet_pton(AF_INET, "127.0.10.20", &cli_addr.sin_addr.s_addr);
 	if (ret < 0) {
 		perror("inet_pton()");
 		return -1;
 	}
-	socket_config->server.addr.sin_port = htons(2030);
-	socket_config->server.length = sizeof(struct sockaddr_in);
+	cli_len = sizeof(struct sockaddr_in);
 
 	ret = connect(socket_config->socket_fd,
-		      (const struct sockaddr *)&socket_config->server.addr,
-		      socket_config->server.length);
+		      (const struct sockaddr *)&cli_addr, cli_len);
 	if (ret < 0) {
 		perror("connect()");
 		close(socket_config->socket_fd);
@@ -145,8 +150,8 @@ static int tcp_socket_connecting(struct socket_config_t *socket_config)
 	}
 	SUCCESS("socket with %d id connect to server with:",
 		socket_config->socket_fd);
-	SUCCESS("\tIP Address: %s", socket_config->server.ip_addr);
-	SUCCESS("\tPort Address: %d", socket_config->server.port_addr);
+	SUCCESS("\tIP Address: 127.0.10.20");
+	SUCCESS("\tPort Address: 2030");
 
 	return 0;
 }
@@ -228,7 +233,7 @@ int tcp_socket_close(struct socket_config_t *socket_config,
 	switch (socket_type) {
 	case SERVER_SIDE: {
 		close(socket_config->socket_fd);
-		close(socket_config->client.client_fd);
+		close(socket_config->_socket_fd);
 		SUCCESS("socket with SERVER_SIDE role closed!!!!!");
 		break;
 	}

@@ -6,28 +6,12 @@
 
 enum socket_type_t { SERVER_SIDE, CLIENT_SIDE };
 
-struct server_side {
-	struct sockaddr_in addr;
-	char ip_addr[15];
-	socklen_t length;
-	uint16_t port_addr;
-};
-
-struct client_side {
-	struct sockaddr_in addr;
-	socklen_t length;
-	int client_fd;
-};
 
 struct socket_config_t {
-	union {
-		struct server_side server;
-		struct client_side client;
-	};
-
 	struct sockaddr_in addr;
 	socklen_t length;
 	int socket_fd;
+	int _socket_fd; /* private memeber*/
 };
 
 int tcp_socket_init(struct socket_config_t *socket_config,
