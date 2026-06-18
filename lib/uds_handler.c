@@ -19,10 +19,17 @@ int uds_socket_init(struct uds_config_t *config, const char *addr,
 			ERROR("UDS socket creation failed!!");
 			return -1;
 		}
-
 		config->addr.sun_family = AF_UNIX;
-		strncpy(config->addr.sun_path, addr, addr_len);
-		strncpy(config->addr_str, addr, addr_len);
+		if (strncpy(config->addr.sun_path, addr, addr_len) == NULL) {
+			ERROR("uds address invalid");
+			return -1;
+		}
+
+		if (strncpy(config->_addr_str, addr, addr_len) == NULL) {
+			ERROR("uds address invalid [copy to local]");
+			return -1;
+		}
+
 		config->len = sizeof(struct sockaddr_un);
 		unlink(addr);
 
@@ -42,7 +49,7 @@ int uds_socket_init(struct uds_config_t *config, const char *addr,
 	return 0;
 }
 
-ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
+ssize_t uds_socket_recv(struct uds_config_t *config, void *msg, size_t msg_len)
 {
 	struct sockaddr_un cli_addr;
 	socklen_t cli_len;
@@ -57,7 +64,7 @@ ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
 		if (recv_bytes < 0) {
 			perror("recvfrom()");
 			close(config->sock);
-			unlink(config->addr_str);
+			unlink(config->_addr_str);
 			return -1;
 		}
 
@@ -68,7 +75,7 @@ ssize_t uds_socket_recv(struct uds_config_t *config, char *msg, size_t msg_len)
 	return recv_bytes;
 }
 
-ssize_t uds_socket_send(struct uds_config_t *config, const char *msg,
+ssize_t uds_socket_send(struct uds_config_t *config, const void *msg,
 			size_t msg_len, const char *addr, size_t addr_len)
 {
 	struct sockaddr_un cli_addr;
@@ -84,7 +91,7 @@ ssize_t uds_socket_send(struct uds_config_t *config, const char *msg,
 	if (send_bytes < 0) {
 		perror("sendto()");
 		close(config->sock);
-		unlink(config->addr_str);
+		unlink(config->_addr_str);
 		return -1;
 	}
 	return send_bytes;
@@ -94,7 +101,7 @@ int uds_socket_close(struct uds_config_t *config)
 {
 	if (config) {
 		close(config->sock);
-		unlink(config->addr_str);
+		unlink(config->_addr_str);
 	} else {
 		return -1;
 	}
