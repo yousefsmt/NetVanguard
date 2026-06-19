@@ -8,26 +8,28 @@ libClp_la_SOURCES = \
 					$(top_srcdir)/lib/tcp_handler.c \
 					$(top_srcdir)/lib/parser.c \
 					$(top_srcdir)/lib/netlink_handler.c \
-					$(top_srcdir)/lib/uds_handler.c
-libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
-libClp_la_LIBADD = $(LIBNL3_LIBS)
+					$(top_srcdir)/lib/uds_handler.c \
+					$(top_srcdir)/lib/db.c
+libClp_la_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) $(SQLITE3_CFLAGS)
+libClp_la_LIBADD = $(LIBNL3_LIBS) $(SQLITE3_LIBS)
 
 pkginclude_HEADERS = \
 					$(top_srcdir)/lib/tcp_handler.h \
 					$(top_srcdir)/lib/parser.h \
 					$(top_srcdir)/lib/netlink_handler.h \
-					$(top_srcdir)/lib/uds_handler.h
+					$(top_srcdir)/lib/uds_handler.h \
+					$(top_srcdir)/lib/db.h
 
 sbin_PROGRAMS = netvanguardd
 bin_PROGRAMS = netvanguard-cli
 
 netvanguardd_SOURCES = src/user_daemon/user.c
-netvanguardd_LDADD = libClp.la $(LIBNL3_LIBS)
+netvanguardd_LDADD = libClp.la $(LIBNL3_LIBS) $(SQLITE3_LIBS)
 netvanguardd_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
 
 netvanguard_cli_SOURCES = src/user_cli/cli.c
 netvanguard_cli_LDADD = libClp.la $(LIBNL3_LIBS)
-netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS)
+netvanguard_cli_CFLAGS = $(AM_CFLAGS) $(LIBNL3_CFLAGS) $(SQLITE3_CFLAGS)
 
 check_PROGRAMS = \
 				tests/netlink_simple_connection/netlink_test \

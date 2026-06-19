@@ -1,13 +1,18 @@
-#include "types.h"
 #include "parser.h"
-#include "netlink_handler.h"
+#include "uds_handler.h"
+
+#define DAEMON_ADDR "/tmp/netvanguardd"
+#define DAEMON_ADDR_LEN ( 18 )
+
+#define USER_ADDR "/tmp/user"
+#define USER_ADDR_LEN ( 10 )
 
 int main(int argc, char *argv[])
 {
-	int family_id;
+	struct van_str_rule_t van_cli;
+	struct uds_config_t uds_config;
+	size_t len = sizeof(struct van_str_rule_t);
 	int err;
-
-	struct van_cli_t van_cli;
 
 	err = cli_parser(&van_cli, argc, argv);
 	if (err < 0) {
@@ -15,55 +20,24 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	signal(SIGINT, handler_signal);
-	signal(SIGKILL, handler_signal);
-	signal(SIGTERM, handler_signal);
-	signal(SIGSEGV, handler_signal);
-
-	family_id = netlink_socket_init(&van_cli.socket);
-
-	err = netlink_socket_init_cb(&van_cli.socket);
+	err = uds_socket_init(&uds_config, USER_ADDR, USER_ADDR_LEN);
 	if (err < 0) {
-		ERROR("Adding callback error occur!!\n");
+		ERROR("uds socket failed");
 		return -1;
 	}
 
-	if ((van_cli.rules.flags & REMOVE_BYTE) == REMOVE_BYTE) {
-		err = netlink_socket_pack_msg(&van_cli.socket, &van_cli.msg,
-					      &van_cli.hdr, &van_cli.rules,
-					      family_id, FW_CMD_REMOVE);
-		if (err < 0) {
-			ERROR("During packing message error occur!!\n");
-			return -1;
-		}
-
-	} else {
-		err = netlink_socket_pack_msg(&van_cli.socket, &van_cli.msg,
-					      &van_cli.hdr, &van_cli.rules,
-					      family_id, FW_CMD_REQUEST);
-		if (err < 0) {
-			ERROR("During packing message error occur!!\n");
-			return -1;
-		}
-	}
-
-	err = netlink_socket_send_msg(&van_cli.socket, &van_cli.msg);
+	err = uds_socket_send(&uds_config, &van_cli, len, DAEMON_ADDR, DAEMON_ADDR_LEN);
 	if (err < 0) {
-		ERROR("During sending message error occur!!\n");
+		ERROR("uds socket send failed");
 		return -1;
 	}
 
-	err = netlink_socket_recv_msg(&van_cli.socket);
+	err = uds_socket_close(&uds_config);
 	if (err < 0) {
-		ERROR("During receiving message error occur!!\n");
+		ERROR("uds socket close failed");
 		return -1;
 	}
 
-	err = netlink_socket_free(&van_cli.socket, &van_cli.msg);
-	if (err < 0) {
-		ERROR("During deallocation resource error occur!!\n");
-		return -1;
-	}
 
 	return 0;
 }

@@ -35,19 +35,19 @@ static int netlink_socket_reply_procces(struct nl_msg *msg, void *arg)
 			genlmsg_attrlen(genlhdr, 0), NULL);
 
 	if (err) {
-		printf("unable to parse message: %s\n", nl_geterror(err));
+		ERROR("unable to parse message: %s\n", nl_geterror(err));
 		return NL_SKIP;
 	}
 
 	if (!tb[FW_ATTR_ACK]) {
-		printf("msg attribute missing from message\n");
+		ERROR("msg attribute missing from message\n");
 		return NL_SKIP;
 	}
 
 	id = nla_get_u32(tb[FW_ATTR_ACK]);
 	err = reply_to_str(id);
 	if (err < 0) {
-		printf("failed to to map id to string\n");
+		ERROR("failed to to map id to string\n");
 		return NL_SKIP;
 	}
 

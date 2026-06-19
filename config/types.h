@@ -27,14 +27,6 @@ enum van_prog_t
 
 #define VANGUARD_MAX ( __VANGUARD_MAX - 1 )
 
-struct van_cli_t
-{
-    struct van_str_rule_t rules;
-    struct nl_sock       *socket;
-    struct nl_msg        *msg;
-    void                 *hdr;
-};
-
 typedef void (*help_t)( const char* );
 typedef void (*parser_t)( void*, int, char* );
 

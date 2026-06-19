@@ -13,6 +13,11 @@
 #include "types.h"
 #include "parser.h"
 
+static sqlite3 *_db;
+static struct uds_config_t *_uds_config;
+static struct nl_sock *_socket;
+static struct nl_msg *_msg;
+
 static const char name[] = "./netvanguard-cli";
 
 static char *log_str[LOG_MAX + 1] = {
@@ -28,10 +33,35 @@ static char *colors[LOG_MAX + 1] = { "\x1b[0m", "\x1b[32m", "\x1b[1;33m",
 static struct tm *m_time;
 static time_t current_time;
 
+int param_init(sqlite3 **db, struct uds_config_t *uds_config, struct nl_sock **socket, struct nl_msg **msg) {
+	_db = *db;
+	_uds_config = uds_config;
+	_socket = *socket;
+	_msg = *msg;
+
+	return 0;
+}
+
 void handler_signal(int sig)
 {
+	int err;
+
 	const char msg[] = "Caught SIGINT\n";
 	write(STDOUT_FILENO, msg, sizeof(msg) - 1);
+
+	err = sql_close(&_db);
+	if(err < 0) {
+		ERROR("close sql failed!");
+	}
+	err = uds_socket_close(_uds_config);
+	if(err < 0) {
+		ERROR("close uds failed!");
+	}
+	err = netlink_socket_free(&_socket, &_msg);
+	if(err < 0) {
+		ERROR("close netlink failed!");
+	}
+
 	_exit(sig);
 }
 
@@ -133,7 +163,7 @@ static uint8_t get_mode(const char *argv)
 	return type;
 }
 
-static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
+static int cli_add_parser(struct van_str_rule_t *rules, int argc, char *argv[])
 {
 	int option_index;
 	int c;
@@ -141,7 +171,7 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 	if (argc == 2)
 		pr_add_help(name);
 
-	memset(van_cli, 0, sizeof(struct van_cli_t));
+	memset(rules, 0, sizeof(struct van_str_rule_t));
 
 	while (1) {
 		option_index = 0x00;
@@ -164,19 +194,19 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 
 		switch (c) {
 		case 'I': {
-			van_cli->rules.flags |= SET_SIDE(INPUT);
+			rules->flags |= SET_SIDE(INPUT);
 			break;
 		}
 		case 'O': {
-			van_cli->rules.flags |= SET_SIDE(OUTPUT);
+			rules->flags |= SET_SIDE(OUTPUT);
 			break;
 		}
 		case 's': {
-			van_cli->rules.flags |= SET_HOOK_TYPE(SOURCE);
+			rules->flags |= SET_HOOK_TYPE(SOURCE);
 			break;
 		}
 		case 'd': {
-			van_cli->rules.flags |= SET_HOOK_TYPE(DESTINATION);
+			rules->flags |= SET_HOOK_TYPE(DESTINATION);
 			break;
 		}
 		case 't': {
@@ -184,7 +214,7 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 					      0x02UL) == 0x00) ?
 					     (size_t)(optind) :
 					     (size_t)(optind - 0x01);
-			van_cli->rules.flags |=
+			rules->flags |=
 				SET_RULE_TYPE(get_mode(argv[idx]));
 			break;
 		}
@@ -193,7 +223,7 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 					      0x02UL) == 0x00) ?
 					     (size_t)(optind) :
 					     (size_t)(optind - 0x01);
-			van_cli->rules.ip = inet_addr(argv[idx]);
+			rules->ip = inet_addr(argv[idx]);
 			break;
 		}
 		case 'p': {
@@ -201,7 +231,7 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 					      0x02UL) == 0x00) ?
 					     (size_t)(optind) :
 					     (size_t)(optind - 0x01);
-			van_cli->rules.port = strtol(argv[idx], NULL, 10);
+			rules->port = strtol(argv[idx], NULL, 10);
 			break;
 		}
 		case '?':
@@ -216,7 +246,7 @@ static int cli_add_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 	return 0;
 }
 
-static int cli_rm_parser(struct van_cli_t *van_cli, int argc, char *argv[])
+static int cli_rm_parser(struct van_str_rule_t *rules, int argc, char *argv[])
 {
 	int option_index;
 	int c;
@@ -224,7 +254,7 @@ static int cli_rm_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 	if (argc == 2)
 		pr_rm_help(name);
 
-	memset(van_cli, 0, sizeof(struct van_cli_t));
+	memset(rules, 0, sizeof(struct van_str_rule_t));
 
 	while (1) {
 		option_index = 0x00;
@@ -247,7 +277,7 @@ static int cli_rm_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 			if (id > 10)
 				return -1;
 
-			van_cli->rules.flags = (REMOVE_BYTE | id);
+			rules->flags = (REMOVE_BYTE | id);
 			break;
 		}
 		case '?':
@@ -262,7 +292,7 @@ static int cli_rm_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 	return 0;
 }
 
-static int cli_sh_parser(struct van_cli_t *van_cli, int argc, char *argv[])
+static int cli_sh_parser(struct van_str_rule_t *rules, int argc, char *argv[])
 {
 	int option_index;
 	int c;
@@ -270,7 +300,7 @@ static int cli_sh_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 	if (argc == 2)
 		pr_sh_help(name);
 
-	memset(van_cli, 0, sizeof(struct van_cli_t));
+	memset(rules, 0, sizeof(struct van_str_rule_t));
 
 	while (1) {
 		option_index = 0x00;
@@ -323,9 +353,9 @@ void pr_log(enum van_log_t level, const char *fmt, ...)
 	va_end(args);
 }
 
-int cli_parser(struct van_cli_t *van_cli, int argc, char *argv[])
+int cli_parser(struct van_str_rule_t *rules, int argc, char *argv[])
 {
-	if (van_cli) {
+	if (rules) {
 		if (argc < 2)
 			pr_main_help(name);
 
@@ -341,11 +371,11 @@ int cli_parser(struct van_cli_t *van_cli, int argc, char *argv[])
 
 		switch (i) {
 		case 0:
-			return cli_add_parser(van_cli, argc, argv);
+			return cli_add_parser(rules, argc, argv);
 		case 1:
-			return cli_rm_parser(van_cli, argc, argv);
+			return cli_rm_parser(rules, argc, argv);
 		case 2:
-			return cli_sh_parser(van_cli, argc, argv);
+			return cli_sh_parser(rules, argc, argv);
 		case 3:
 			pr_main_help(name);
 			break;

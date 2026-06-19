@@ -3,6 +3,9 @@
 
 #include <signal.h>
 #include "types.h"
+#include "uds_handler.h"
+#include "db.h"
+#include "netlink_handler.h"
 
 #define VER_MAJ (LINUX_VERSION_CODE >> 16)
 #define VER_MIN ((LINUX_VERSION_CODE - (VER_MAJ << 16)) >> 8)
@@ -14,7 +17,8 @@
 #define ERROR(msg...) pr_log(ERROR, msg)
 
 void handler_signal(int signal);
-int cli_parser(struct van_cli_t *van_cli, int argc, char *argv[]);
+int cli_parser(struct van_str_rule_t *rules, int argc, char *argv[]);
+int param_init(sqlite3 **db, struct uds_config_t *uds_config, struct nl_sock **socket, struct nl_msg **msg);
 void pr_log(enum van_log_t level, const char *fmt, ...);
 
 #endif /* NETVANGUARD_LIB_PARSER_H_ */
