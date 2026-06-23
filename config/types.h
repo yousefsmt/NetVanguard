@@ -7,6 +7,7 @@
 
 enum van_log_t
 {
+    __LOG_UNSPECIFIED,
     DEBUG,
     SUCCESS,
     WARNING,
@@ -18,6 +19,7 @@ enum van_log_t
 
 enum van_prog_t
 {
+    __PROG_UNSPECIFIED,
     VANGUARD_TEST_TCP,
     VANGUARD_TEST_NL,
     VANGUARD_CLI,
@@ -26,17 +28,6 @@ enum van_prog_t
 };
 
 #define VANGUARD_MAX ( __VANGUARD_MAX - 1 )
-
-struct van_cli_t
-{
-    struct van_str_rule_t rules;
-    struct nl_sock       *socket;
-    struct nl_msg        *msg;
-    void                 *hdr;
-};
-
-typedef void (*help_t)( const char* );
-typedef void (*parser_t)( void*, int, char* );
 
 #ifdef __EMSCRIPTEN
     #define NO_ANSI

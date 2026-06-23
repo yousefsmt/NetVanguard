@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0] - 2026-06-23
+
+### Added
+
+- Add damon code for running on background
+- Add SQL database for store rules
+- Add Unix socket based for comm between commander and daemon
+
+### Changed
+
+- Remove crash-handler from parser.c
+
+### Fixed
+
+- Change signal receiving message & freeup resource on signals
+
 ## [v0.1.1] - 2026-06-14
 
 ### Added
@@ -25,3 +41,4 @@ All notable changes to this project will be documented in this file.
 
 [v0.1.0]: https://github.com/yousefsmt/NetVanguard/tree/v0.1.0
 [v0.1.1]: https://github.com/yousefsmt/NetVanguard/tree/v0.1.1
+[v0.2.0]: https://github.com/yousefsmt/NetVanguard/tree/v0.2.0

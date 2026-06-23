@@ -3,16 +3,20 @@
 
 #include <signal.h>
 #include "types.h"
+#include "uds_handler.h"
+#include "db.h"
+#include "netlink_handler.h"
 
-#define DEBUG( msg... )   debug_msg( DEBUG, msg )
-#define SUCCESS( msg... ) debug_msg( SUCCESS, msg )
-#define WARNING( msg... ) debug_msg( WARNING, msg )
-#define ERROR( msg... )   debug_msg( ERROR, msg )
+#define VER_MAJ (LINUX_VERSION_CODE >> 16)
+#define VER_MIN ((LINUX_VERSION_CODE - (VER_MAJ << 16)) >> 8)
+#define VER_PAT (LINUX_VERSION_CODE - (VER_MAJ << 16) - (VER_MIN << 8))
 
-int handler_options( void *config, int argc, char *argv[],
-                     help_t cb, parser_t parser, int type );
-void handler_signal( int signal );
+#define DEBUG(msg...) pr_log(DEBUG, msg)
+#define SUCCESS(msg...) pr_log(SUCCESS, msg)
+#define WARNING(msg...) pr_log(WARNING, msg)
+#define ERROR(msg...) pr_log(ERROR, msg)
 
-void debug_msg( enum van_log_t level, const char * fmt, ...);
+int cli_parser(struct van_str_rule_t *rules, int argc, char *argv[]);
+void pr_log(enum van_log_t level, const char *fmt, ...);
 
 #endif /* NETVANGUARD_LIB_PARSER_H_ */

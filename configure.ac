@@ -4,12 +4,15 @@ AC_INIT([NetVanguard], [1.0], [yoosefsamet@gmail.com])
 AC_CONFIG_SRCDIR([lib/tcp_handler.c])
 AC_CONFIG_SRCDIR([lib/netlink_handler.c])
 AC_CONFIG_SRCDIR([lib/parser.c])
+AC_CONFIG_SRCDIR([lib/uds_handler.c])
+AC_CONFIG_SRCDIR([lib/db.c])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.2.0 libnl-route-3.0 >= 3.2.0 libnl-genl-3.0 >= 3.2.0 libnl-nf-3.0 >= 3.2.0 libnl-cli-3.0 >= 3.2.0])
+PKG_CHECK_MODULES(SQLITE3, [sqlite3 >= 3.5.0 ])
 
 AC_PROG_CC
 AM_PROG_AR
