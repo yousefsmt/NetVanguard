@@ -16,9 +16,7 @@
 #define WARNING(msg...) pr_log(WARNING, msg)
 #define ERROR(msg...) pr_log(ERROR, msg)
 
-void handler_signal(int signal);
 int cli_parser(struct van_str_rule_t *rules, int argc, char *argv[]);
-int param_init(sqlite3 **db, struct uds_config_t *uds_config, struct nl_sock **socket, struct nl_msg **msg);
 void pr_log(enum van_log_t level, const char *fmt, ...);
 
 #endif /* NETVANGUARD_LIB_PARSER_H_ */

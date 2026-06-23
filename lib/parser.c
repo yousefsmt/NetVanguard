@@ -6,67 +6,34 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <limits.h>
-#include <unistd.h>
 #include <stdarg.h>
 #include <linux/version.h>
 
 #include "types.h"
 #include "parser.h"
 
-static sqlite3 *_db;
-static struct uds_config_t *_uds_config;
-static struct nl_sock *_socket;
-static struct nl_msg *_msg;
-
 static const char name[] = "./netvanguard-cli";
 
 static char *log_str[LOG_MAX + 1] = {
+	NULL,
 	"DEBUG",
 	"SUCCESS",
 	"WARNING",
-	"ERROR",
+	"ERROR"
 };
 
-static char *colors[LOG_MAX + 1] = { "\x1b[0m", "\x1b[32m", "\x1b[1;33m",
-				     "\x1b[31m" };
+static char *colors[LOG_MAX + 1] ={
+  NULL,
+  "\x1b[0m",
+  "\x1b[32m",
+  "\x1b[1;33m",
+  "\x1b[31m"
+};
 
 static struct tm *m_time;
 static time_t current_time;
 
-int param_init(sqlite3 **db, struct uds_config_t *uds_config, struct nl_sock **socket, struct nl_msg **msg) {
-	_db = *db;
-	_uds_config = uds_config;
-	_socket = *socket;
-	_msg = *msg;
-
-	return 0;
-}
-
-void handler_signal(int sig)
-{
-	int err;
-
-	const char msg[] = "Caught SIGINT\n";
-	write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-
-	err = sql_close(&_db);
-	if(err < 0) {
-		ERROR("close sql failed!");
-	}
-	err = uds_socket_close(_uds_config);
-	if(err < 0) {
-		ERROR("close uds failed!");
-	}
-	err = netlink_socket_free(&_socket, &_msg);
-	if(err < 0) {
-		ERROR("close netlink failed!");
-	}
-
-	_exit(sig);
-}
-
-static void pr_sh_help(const char *prog_name)
-{
+static void pr_sh_help(const char *prog_name) {
 	printf("NetVanguard-CLI v0.1.0 - Lightweight iptables Firewall\n"
 	       "Kernel Version: %d.%d.%d\n"
 	       "Copyright (C) 2026 Yoosef Samet\n"
