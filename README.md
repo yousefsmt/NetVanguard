@@ -6,12 +6,12 @@ NetVanguard is an educational, low-level firewall designed for Linux-based syste
 
 ## Table of Contents
 
-* [Overview](https://www.google.com/search?q=%23overview)
-* [Download](https://www.google.com/search?q=%23download)
-* [Build and Install](https://www.google.com/search?q=%23build-and-install)
-* [License](https://www.google.com/search?q=%23license)
-* [Contributing](https://www.google.com/search?q=%23contributing)
-* [Copyright](https://www.google.com/search?q=%23copyright)
+- [Overview](#overview)
+- [Download](#download)
+- [Build and Install](#build-and-install)
+- [License](#license)
+- [Contributing](#contributing)
+- [Copyright](#copyright)
 
 ---
 
